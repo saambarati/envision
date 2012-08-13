@@ -474,12 +474,17 @@ require.define("/graphStream.js",function(require,module,exports,__dirname,__fil
 
 var Stream = require('stream')
   , util = require('util')
-  , graphMap 
 
-graphMap = {
-  'bar' : BarGraph
-}
 
+/*
+ * High level overview of classes:
+ *
+ * GraphStream is a writable stream that takes incoming JSON buffers and parses through them
+ * GraphStream calls the method `draw` when its own `write` method is called. `draw` is meant to be implemented by its subclasses
+ * 
+ * Graph is a subclass of GraphStream and it is also meant to be subclassed. 
+ * Graph just provides a unified interface for some basic attributes that all Graphs are expected to have such as {width, height, DOM selector, etc}
+*/
 
 //opts are passed down to Graph object
 function GraphStream(opts) {
@@ -489,9 +494,9 @@ function GraphStream(opts) {
   this.readable = false
   this.writable = true
 
-  this.once('pipe', function(src) {
-    //this._graph.dummy()
-  })
+ // this.once('pipe', function(src) {
+ // 
+ // })
   this._buffers = []
   this._filters = []
 }
@@ -499,7 +504,7 @@ util.inherits(GraphStream, Stream)
 
 GraphStream.prototype.write = function (buf) {
   buf = JSON.parse(buf)
-  if (this._filters.length && this._filters.indexOf(buf.name) !== -1) return
+  if (this._filters.length && this._filters.indexOf(buf.name) !== -1) return //ignore certain buffers
 
   this.draw(buf)
   console.log('incoming graph data')
@@ -519,12 +524,13 @@ GraphStream.prototype.filter = function() {
 
 /*
  * opts  =>
- *   width  
- *   height   
- *   selector : #div, html el    :: <body> default
- *   className : .class for css  :: 'graph' default
- *   dataPoints : number of dataPoints in the graph :: default 15
+ *   width      : svg context width :: default 800
+ *   height     : svg context height :: default 800 
+ *   selector   : #div, html el :: <body> default
+ *   className  : .class for css :: 'graph' default
+ *   dataPoints : number of dataPoints expected in the graph :: default 15
 */
+
 function Graph (opts) {
   if (!(this instanceof Graph)) return new Graph(opts)
 
@@ -557,8 +563,7 @@ function BarGraph(opts) {
 
   Graph.call(this, opts)
 
-  //dummy data
-  this.data = d3.range(this.dataPoints).map(function() { return {val:2} })
+  this.data = d3.range(this.dataPoints).map(function() { return {val:2, name:'dummy'} }) //dummy data
   this.separator = opts.separator || 1 
   this.transitionTime = opts.transitionTime || 750
   //this.barWidth = (this.width / this.dataPoints) - (this.separator * this.dataPoints)
@@ -1991,6 +1996,7 @@ $(document).ready(function() {
   dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
 
   dataStream('/pipecircle/').pipe(graphStream.CircleGraph(circleOpts))
+  $('body').append('<p>hello</p>')
 })
 });
 require("/example.js");

@@ -11,6 +11,9 @@ var tako = require('tako')
   , path = require('path')
 
 app.route('/').html(function(req, res) {
+  console.log('serving home page')
+  res.setHeader('content-type', 'text/html')
+  res.statusCode = 200
   fs.createReadStream(path.join(__dirname, 'client/home.html')).pipe(res)
 })
 

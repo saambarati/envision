@@ -15,5 +15,9 @@
     , "tako" : "*"
     , "request" : "*"
   },
+  "engines" : {
+    "node" : "v0.8.x"
+    , "npm" : "*"
+  },
   "license": "MIT"
 }
