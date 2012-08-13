@@ -7,7 +7,7 @@ var tako = require('tako')
   , fs = require('fs')
   , logger = logStream.create(console)
   , app = tako()
-  , PORT = process.env.PORT || 8081
+  , PORT = 8081
   , path = require('path')
 
 app.route('/').html(function(req, res) {
