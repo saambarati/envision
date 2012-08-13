@@ -72,6 +72,7 @@ function Graph (opts) {
   this.dataPoints = opts.dataPoints || null
   this.data = null
   this.separator = opts.separator || null
+  this.transitionTime = opts.transitionTime || 750
 
   this.ctx = d3.select(opts.selector || 'body')
     .append('svg')
@@ -94,7 +95,6 @@ function BarGraph(opts) {
 
   this.data = d3.range(this.dataPoints).map(function() { return {val:2, name:'dummy'} }) //dummy data
   this.separator = opts.separator || 1 
-  this.transitionTime = opts.transitionTime || 750
   //this.barWidth = (this.width / this.dataPoints) - (this.separator * this.dataPoints)
   function fixBarWidth() { //if separator is too big compared to barWidth
     this.barWidth = (((this.width - ((this.separator-1) * this.dataPoints))) / this.dataPoints)
@@ -205,6 +205,7 @@ CircleGraph.prototype.draw = function (buf) {
     , xScale
     , toAll = {}
     , intervalLength
+    , t = self.transitionTime
 
   //each name will be an array
   if (!this.data[buf.name]) this.data[buf.name] = []
@@ -237,7 +238,7 @@ CircleGraph.prototype.draw = function (buf) {
        .attr('cy', toAll.cy)
 
   chart.transition()
-       .duration(1000)
+       .duration(t)
        .attr('r', function(d) { return toAll.r(d[0]) })
        .attr('cx', toAll.cx)
 
@@ -256,12 +257,12 @@ CircleGraph.prototype.draw = function (buf) {
        .text(toAll.text)
        //.attr('opacity', 0)
      .transition()
-       .duration(1000)
+       .duration(t)
        .attr('x', function (d, i) { return intervalLength * i })
        .attr('dx', intervalLength/2)
 
   chart.transition()
-       .duration(1000)
+       .duration(t)
        .attr('x', function (d, i) { return intervalLength*i })
        .attr('dx', intervalLength/2)
        .text(toAll.text)

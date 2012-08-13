@@ -543,6 +543,7 @@ function Graph (opts) {
   this.dataPoints = opts.dataPoints || null
   this.data = null
   this.separator = opts.separator || null
+  this.transitionTime = opts.transitionTime || 750
 
   this.ctx = d3.select(opts.selector || 'body')
     .append('svg')
@@ -565,7 +566,6 @@ function BarGraph(opts) {
 
   this.data = d3.range(this.dataPoints).map(function() { return {val:2, name:'dummy'} }) //dummy data
   this.separator = opts.separator || 1 
-  this.transitionTime = opts.transitionTime || 750
   //this.barWidth = (this.width / this.dataPoints) - (this.separator * this.dataPoints)
   function fixBarWidth() { //if separator is too big compared to barWidth
     this.barWidth = (((this.width - ((this.separator-1) * this.dataPoints))) / this.dataPoints)
@@ -676,6 +676,7 @@ CircleGraph.prototype.draw = function (buf) {
     , xScale
     , toAll = {}
     , intervalLength
+    , t = self.transitionTime
 
   //each name will be an array
   if (!this.data[buf.name]) this.data[buf.name] = []
@@ -708,7 +709,7 @@ CircleGraph.prototype.draw = function (buf) {
        .attr('cy', toAll.cy)
 
   chart.transition()
-       .duration(1000)
+       .duration(t)
        .attr('r', function(d) { return toAll.r(d[0]) })
        .attr('cx', toAll.cx)
 
@@ -727,12 +728,12 @@ CircleGraph.prototype.draw = function (buf) {
        .text(toAll.text)
        //.attr('opacity', 0)
      .transition()
-       .duration(1000)
+       .duration(t)
        .attr('x', function (d, i) { return intervalLength * i })
        .attr('dx', intervalLength/2)
 
   chart.transition()
-       .duration(1000)
+       .duration(t)
        .attr('x', function (d, i) { return intervalLength*i })
        .attr('dx', intervalLength/2)
        .text(toAll.text)
@@ -1518,13 +1519,13 @@ DataStream.prototype._clearAverages = function () {
     }
     profileTypes[curBuf.name].push(curBuf.val)
   }
+  this._averageDataBuf = []
   keys = Object.getOwnPropertyNames(profileTypes) 
   for (i = 0; i < keys.length; i++) {
     curValArr = profileTypes[keys[i]]
     average = averageOfArray(curValArr)
     curValArr._original.val = average
     this._buffers.push(JSON.stringify(curValArr._original))
-    this._averageDataBuf = []
   }
   this._emitBuffers() 
 }
@@ -1958,6 +1959,7 @@ $(document).ready(function() {
     , graphOpts2
     , dStream
     , circleOpts
+    , cDatOpts
 
   opts = {
     url : '/pipe/'
@@ -1982,6 +1984,12 @@ $(document).ready(function() {
     , transitionTime : 1500
   }
 
+  cDatOpts = {
+    url : '/pipecircle/'
+    , averagingData : true
+    , averageDataInterval : 3000
+  }
+
   circleOpts = {
     dataPoints : 4
     , separator : 10
@@ -1990,13 +1998,13 @@ $(document).ready(function() {
     , selector : '#circle1'
     , transitionTime : 1000
   }
+  
 
   dStream = dataStream(opts)
   dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
   dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
 
-  dataStream('/pipecircle/').pipe(graphStream.CircleGraph(circleOpts))
-  $('body').append('<p>hello</p>')
+  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
 })
 });
 require("/example.js");

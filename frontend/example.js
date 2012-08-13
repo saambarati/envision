@@ -11,6 +11,7 @@ $(document).ready(function() {
     , graphOpts2
     , dStream
     , circleOpts
+    , cDatOpts
 
   opts = {
     url : '/pipe/'
@@ -35,6 +36,12 @@ $(document).ready(function() {
     , transitionTime : 1500
   }
 
+  cDatOpts = {
+    url : '/pipecircle/'
+    , averagingData : true
+    , averageDataInterval : 3000
+  }
+
   circleOpts = {
     dataPoints : 4
     , separator : 10
@@ -43,10 +50,11 @@ $(document).ready(function() {
     , selector : '#circle1'
     , transitionTime : 1000
   }
+  
 
   dStream = dataStream(opts)
   dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
   dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
 
-  dataStream('/pipecircle/').pipe(graphStream.CircleGraph(circleOpts))
+  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
 })

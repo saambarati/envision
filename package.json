@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node ./example/app.js"
   },
-  "main" : "./example/app.js",
   "dependencies" : {
     "browserify" : "*"
     , "profiles" : "*"

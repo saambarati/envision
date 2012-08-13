@@ -59,9 +59,13 @@ function DataStream(opts) {
   this._buffers = []
   this._averageDataBuf = []
 
+  var intID
   if (this._averagingData) {
     if (!this._averageDataInterval) throw new Error('to take an average of the incoming data, I need an "averageDataInterval"') 
-    setInterval(this._clearAverages.bind(this), this._averageDataInterval)
+    intID = setInterval(this._clearAverages.bind(this), this._averageDataInterval)
+    this.once('end', function() {
+      clearInterval(intID)
+    })
   }
   this._begin()
   //setTimeout(0, this.resume.bind(this))
@@ -132,7 +136,7 @@ DataStream.prototype._clearAverages = function () {
   var profileTypes = {}
     , i
     , curBuf
-    , keys
+    , objProps
     , key
     , curValArr
     , average
@@ -145,14 +149,15 @@ DataStream.prototype._clearAverages = function () {
     }
     profileTypes[curBuf.name].push(curBuf.val)
   }
-  keys = Object.getOwnPropertyNames(profileTypes) 
-  for (i = 0; i < keys.length; i++) {
-    curValArr = profileTypes[keys[i]]
+  //why isn't forEach supported by IE :(
+  objProps = Object.getOwnPropertyNames(profileTypes) 
+  for (i = 0; i < objProps.length; i++) {
+    curValArr = profileTypes[objProps[i]]
     average = averageOfArray(curValArr)
     curValArr._original.val = average
     this._buffers.push(JSON.stringify(curValArr._original))
-    this._averageDataBuf = []
   }
+  this._averageDataBuf = []
   this._emitBuffers() 
 }
 
