@@ -17,6 +17,7 @@
   },
   "engines" : {
     "node" : "v0.8.x"
+    , "npm" : "1.1.x"
   },
   "license": "MIT"
 }
