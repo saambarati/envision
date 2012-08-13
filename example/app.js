@@ -33,7 +33,7 @@ app.route('/pipecircle', function(req, res) {
   console.log('beginning a data pipe for circle')
   var endTime = 1000 * 60 * 2  //2 mins
   res.setHeader('content-type', 'x-json-stream')
-  var s = profiles.PS(profiler, endTime).filter('data1', 'data2', 'data3', 'data4')
+  var s = profiles.PS(profiler, endTime)//.filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6')
   //s.pipe(process.stdout) 
   s.pipe(res)
 })
@@ -43,6 +43,8 @@ setInterval(function() {
   profiler.stat('data2', Math.random() * 600 + 20)
   profiler.stat('data3', Math.random() * 600 + 20)
   profiler.stat('data4', Math.random() * 600 + 20)
+  profiler.stat('data5', Math.random() * 600 + 20)
+  profiler.stat('data6', Math.random() * 600 + 20)
 }, 1000)
 
 app.httpServer.listen(PORT)
@@ -52,7 +54,7 @@ function test() {
   request('http://nodejs.org', function(e, res, body) {
     //console.log(endFunc())
     endFunc()
-    setTimeout(test, 100)
+    setTimeout(test, 2000)
   })
 }
 test()

@@ -15,25 +15,25 @@ $(document).ready(function() {
 
   opts = {
     url : '/pipe/'
-    , averagingData : true
-    , averageDataInterval : 2000
+    //, averagingData : true
+    //, averageDataInterval : 2000
   }
 
   graphOpts = {
-    dataPoints : 15
+    dataPoints : 10
     , separator : 4
     , height : 500
-    , width : 600
+    , width : 900
     , selector : '#bar1'
-    , transitionTime : 1500
+    , transitionTime : 750
   }
   graphOpts2 = {
-    dataPoints : 20
+    dataPoints : 8
     , separator : 1
     , height : 500
-    , width : 600
+    , width : 900
     , selector : '#bar2'
-    , transitionTime : 1500
+    , transitionTime : 500
   }
 
   cDatOpts = {
@@ -45,8 +45,8 @@ $(document).ready(function() {
   circleOpts = {
     dataPoints : 4
     , separator : 10
-    , height : 500
-    , width : 600
+    , height : 800
+    , width : 900
     , selector : '#circle1'
     , transitionTime : 1000
   }
@@ -56,5 +56,5 @@ $(document).ready(function() {
   dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
   dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
 
-  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
+  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts).filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6'))
 })

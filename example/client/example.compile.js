@@ -504,7 +504,7 @@ util.inherits(GraphStream, Stream)
 
 GraphStream.prototype.write = function (buf) {
   buf = JSON.parse(buf)
-  if (this._filters.length && this._filters.indexOf(buf.name) !== -1) return //ignore certain buffers
+  if (this._filters.length && this._filters.indexOf(buf.name) === -1) return //ignore certain buffers
 
   this.draw(buf)
   console.log('incoming graph data')
@@ -566,6 +566,7 @@ function BarGraph(opts) {
 
   this.data = d3.range(this.dataPoints).map(function() { return {val:2, name:'dummy'} }) //dummy data
   this.separator = opts.separator || 1 
+
   //this.barWidth = (this.width / this.dataPoints) - (this.separator * this.dataPoints)
   function fixBarWidth() { //if separator is too big compared to barWidth
     this.barWidth = (((this.width - ((this.separator-1) * this.dataPoints))) / this.dataPoints)
@@ -597,7 +598,7 @@ BarGraph.prototype.draw = function (val) {
     , t = self.transitionTime
 
   self.data.push(val)
-  self.data.shift()
+  if (self.data.length > self.dataPoints) self.data.shift()
 
   xScale = d3.scale.linear()
              .domain([0, self.data.length])
@@ -641,7 +642,15 @@ BarGraph.prototype.draw = function (val) {
        .attr('x', function (d, i) { return xScale(i-1) - 0.5 })
        .remove()
 
-
+  var textOpts = {
+    height : self.height
+    , width : self.width
+    , transitionTime : self.transitionTime
+    , intervalLength : self.barWidth + self.separator
+    , text : function (d) { return '' + Math.floor(d.val) }
+    , fill : 'white'
+  }
+  drawText(self.ctx, textOpts, self.data)
 
 }
 
@@ -663,7 +672,7 @@ util.inherits(CircleGraph, Graph)
 exports.CircleGraph = CircleGraph
 
 CircleGraph.prototype.filter = function() {
-  Graph.filter.apply(this, arguments)
+  Graph.prototype.filter.apply(this, arguments)
   this.dataPoints = this._filters.length
   return this
 }
@@ -715,6 +724,7 @@ CircleGraph.prototype.draw = function (buf) {
 
   chart.exit().remove()
 
+  /*
   chart = self.ctx.selectAll('text')
               .data(d3Data)
  
@@ -740,7 +750,17 @@ CircleGraph.prototype.draw = function (buf) {
        //.attr('opacity', 1)
 
   chart.exit().remove()
+  */
+
+  var textOpts = {
+    height : self.height
+    , width : self.width
+    , text : function (d, i) { return d[1]+'->'+Math.floor(d[0]) }
+    , transitionTime : self.transitionTime
+  }
+  drawText(self.ctx, textOpts, d3Data)
        
+  /*
   for (var i = 0; i <= 4; i++) {
     self.ctx.append('line')
         .attr('x1', (self.width/4)*i - 0.5)
@@ -749,9 +769,43 @@ CircleGraph.prototype.draw = function (buf) {
         .attr('y2', 0.5)
         .attr('stroke', '#000')
   }
+  */
        
 }
 
+function drawText(ctx, opts, data) {
+  if (!opts.height || !opts.width) throw new Error('need height and width')
+
+  var chart
+    , intervalLength = opts.intervalLength || (opts.width / data.length)
+    , t = opts.transitionTime || 1000
+
+  opts.text = opts.text || String
+  chart =  ctx.selectAll('text')
+              .data(data)
+ 
+  chart.enter().append('text')
+       .attr('x', opts.x || function (d, i) { return intervalLength*i })
+       .attr('y', opts.y || (opts.height - 25))
+       .attr('dy', opts.dy || '1.2em')
+       .attr('dx', opts.dx || (intervalLength/2))
+       .attr('text-anchor', opts['text-anchor'] || 'middle')
+       .attr('fill', opts.fill || 'steelBlue')
+       .text(opts.text)
+     .transition()
+       .duration(t)
+       .attr('x', opts.x || function (d, i) { return intervalLength * i })
+       .attr('dx', opts.dx || intervalLength/2)
+       .text(opts.text)
+
+  chart.transition()
+       .duration(t)
+       .attr('x', opts.x || function (d, i) { return intervalLength*i })
+       .attr('dx', opts.dx || intervalLength/2)
+       .text(opts.text)
+
+  chart.exit().remove()
+}
 
 
 function averageOfArray(arr) {
@@ -1936,25 +1990,25 @@ $(document).ready(function() {
 
   opts = {
     url : '/pipe/'
-    , averagingData : true
-    , averageDataInterval : 2000
+    //, averagingData : true
+    //, averageDataInterval : 2000
   }
 
   graphOpts = {
-    dataPoints : 15
+    dataPoints : 10
     , separator : 4
     , height : 500
-    , width : 600
+    , width : 900
     , selector : '#bar1'
-    , transitionTime : 1500
+    , transitionTime : 750
   }
   graphOpts2 = {
-    dataPoints : 20
+    dataPoints : 8
     , separator : 1
     , height : 500
-    , width : 600
+    , width : 900
     , selector : '#bar2'
-    , transitionTime : 1500
+    , transitionTime : 500
   }
 
   cDatOpts = {
@@ -1966,8 +2020,8 @@ $(document).ready(function() {
   circleOpts = {
     dataPoints : 4
     , separator : 10
-    , height : 500
-    , width : 600
+    , height : 800
+    , width : 900
     , selector : '#circle1'
     , transitionTime : 1000
   }
@@ -1977,7 +2031,7 @@ $(document).ready(function() {
   dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
   dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
 
-  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
+  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts).filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6'))
 })
 });
 require("/example.js");
