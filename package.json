@@ -12,9 +12,6 @@
     , "profiles" : "*"
   },
   "devDependencies" : {
-    "logStream" : "*"
-    , "tako" : "*"
-    , "request" : "*"
   },
   "engines" : {
     "node" : "v0.8.x"
