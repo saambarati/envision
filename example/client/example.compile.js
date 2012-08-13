@@ -700,7 +700,7 @@ CircleGraph.prototype.draw = function (buf) {
 
   toAll.cx = function (d, i) { return (i+1)*intervalLength - (intervalLength/2) }
   toAll.r = rScale
-  toAll.cy = self.width/2 - 0.5
+  toAll.cy = self.width/2 - 10 - 0.5
   toAll.text = function (d, i) { return d[1]+'=>'+Math.floor(d[0]) }
 
   chart.enter().append('circle')
@@ -741,13 +741,13 @@ CircleGraph.prototype.draw = function (buf) {
 
   chart.exit().remove()
        
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i <= 4; i++) {
     self.ctx.append('line')
-        .attr('x1', (self.width/4) * i)
-        .attr('x2', (self.width/4) * i)
-        .attr('y1', this.height - 0.5)
+        .attr('x1', (self.width/4)*i - 0.5)
+        .attr('x2', (self.width/4)*i - 0.5)
+        .attr('y1', self.height - 0.5)
         .attr('y2', 0.5)
-        .style('stroke', '#000')
+        .attr('stroke', '#000')
   }
        
 }
@@ -1433,12 +1433,15 @@ function DataStream(opts) {
   this._buffers = []
   this._averageDataBuf = []
 
+  var intID
   if (this._averagingData) {
     if (!this._averageDataInterval) throw new Error('to take an average of the incoming data, I need an "averageDataInterval"') 
-    setInterval(this._clearAverages.bind(this), this._averageDataInterval)
+    intID = setInterval(this._clearAverages.bind(this), this._averageDataInterval)
+    this.once('end', function() {
+      clearInterval(intID)
+    })
   }
-  this._begin()
-  //setTimeout(0, this.resume.bind(this))
+  if (opts.__test === undefined) this._begin()  //shim to be able to test w/ node.js runtime
   process.nextTick(this.resume.bind(this))
 }
 util.inherits(DataStream, Stream)
@@ -1506,7 +1509,7 @@ DataStream.prototype._clearAverages = function () {
   var profileTypes = {}
     , i
     , curBuf
-    , keys
+    , objProps
     , key
     , curValArr
     , average
@@ -1519,14 +1522,15 @@ DataStream.prototype._clearAverages = function () {
     }
     profileTypes[curBuf.name].push(curBuf.val)
   }
-  this._averageDataBuf = []
-  keys = Object.getOwnPropertyNames(profileTypes) 
-  for (i = 0; i < keys.length; i++) {
-    curValArr = profileTypes[keys[i]]
+  //why isn't forEach supported by IE :(
+  objProps = Object.getOwnPropertyNames(profileTypes) 
+  for (i = 0; i < objProps.length; i++) {
+    curValArr = profileTypes[objProps[i]]
     average = averageOfArray(curValArr)
     curValArr._original.val = average
     this._buffers.push(JSON.stringify(curValArr._original))
   }
+  this._averageDataBuf = []
   this._emitBuffers() 
 }
 
@@ -1864,37 +1868,6 @@ module.exports.ConcatStream = ConcatStream
 });
 
 require.define("/JSONURLStream.js",function(require,module,exports,__dirname,__filename,process){
-/*
-      var req = new XMLHttpRequest()
-         , place = 0
-         , dataPoints = []
-         , buffer = []
-
-      function progress(evt) {
-        var data = req.responseText.slice(place)
-          , single
-          , i
-        place += data.length
-        data = data.split('\n')
-        for (i = data.length-2; i >= 0; i--) { //-2 b/c the final \n will be an empty string
-          single = JSON.parse(data[i])
-          buffer.push(single.val)
-        }
-        //draw(dataPoints)
-      }
-      req.addEventListener('progress', progress)
-      req.open('GET', 'http://localhost:8081/pipe', true)
-      req.send()
-      setInterval(function() {
-        if (!buffer.length) return
-        var ave = buffer.average()
-        dataPoints.unshift(0+ave)
-        draw(dataPoints)
-        buffer = []
-      }, 100)
-    }())
-*/
-
 var util = require('util')
   , Stream = require('stream')
 
@@ -1987,7 +1960,7 @@ $(document).ready(function() {
   cDatOpts = {
     url : '/pipecircle/'
     , averagingData : true
-    , averageDataInterval : 3000
+    , averageDataInterval : 1500
   }
 
   circleOpts = {

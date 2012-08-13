@@ -39,7 +39,7 @@ $(document).ready(function() {
   cDatOpts = {
     url : '/pipecircle/'
     , averagingData : true
-    , averageDataInterval : 3000
+    , averageDataInterval : 1500
   }
 
   circleOpts = {

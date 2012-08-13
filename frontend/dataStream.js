@@ -67,8 +67,7 @@ function DataStream(opts) {
       clearInterval(intID)
     })
   }
-  this._begin()
-  //setTimeout(0, this.resume.bind(this))
+  if (opts.__test === undefined) this._begin()  //shim to be able to test w/ node.js runtime
   process.nextTick(this.resume.bind(this))
 }
 util.inherits(DataStream, Stream)

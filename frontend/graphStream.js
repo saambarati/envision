@@ -229,7 +229,7 @@ CircleGraph.prototype.draw = function (buf) {
 
   toAll.cx = function (d, i) { return (i+1)*intervalLength - (intervalLength/2) }
   toAll.r = rScale
-  toAll.cy = self.width/2 - 0.5
+  toAll.cy = self.width/2 - 10 - 0.5
   toAll.text = function (d, i) { return d[1]+'=>'+Math.floor(d[0]) }
 
   chart.enter().append('circle')
@@ -270,13 +270,13 @@ CircleGraph.prototype.draw = function (buf) {
 
   chart.exit().remove()
        
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i <= 4; i++) {
     self.ctx.append('line')
-        .attr('x1', (self.width/4) * i)
-        .attr('x2', (self.width/4) * i)
-        .attr('y1', this.height - 0.5)
+        .attr('x1', (self.width/4)*i - 0.5)
+        .attr('x2', (self.width/4)*i - 0.5)
+        .attr('y1', self.height - 0.5)
         .attr('y2', 0.5)
-        .style('stroke', '#000')
+        .attr('stroke', '#000')
   }
        
 }
