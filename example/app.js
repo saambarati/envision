@@ -33,7 +33,7 @@ app.route('/pipecircle', function(req, res) {
   console.log('beginning a data pipe for circle')
   var endTime = 1000 * 60 * 2  //2 mins
   res.setHeader('content-type', 'x-json-stream')
-  var s = profiles.PS(profiler, endTime)//.filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6')
+  var s = profiles.PS(profiler, endTime).filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6')
   //s.pipe(process.stdout) 
   s.pipe(res)
 })

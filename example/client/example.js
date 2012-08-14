@@ -29,8 +29,8 @@ $(document).ready(function() {
   graphOpts2 = {
     dataPoints : 8
     , separator : 1
-    , height : 500
-    , width : 900
+    , height : 250
+    , width : 350
     , selector : '#bar2'
     , transitionTime : 500
   }
@@ -44,7 +44,7 @@ $(document).ready(function() {
   circleOpts = {
     dataPoints : 4
     , separator : 10
-    , height : 100
+    , height : 200
     , width : 600
     , selector : '#circle1'
     , transitionTime : 1000
@@ -55,5 +55,5 @@ $(document).ready(function() {
   dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
   dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
 
-  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts).filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6'))
+  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
 })

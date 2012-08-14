@@ -93,12 +93,12 @@ function BarGraph(opts) {
 
   Graph.call(this, opts)
 
-  this.data = d3.range(this.dataPoints).map(function() { return {val:2, name:'dummy'} }) //dummy data
+  this.data = d3.range(this.dataPoints).map(function() { return {val:0, name:'dummy'} }) //dummy data
   this.separator = opts.separator || 1 
 
   //this.barWidth = (this.width / this.dataPoints) - (this.separator * this.dataPoints)
   function fixBarWidth() { //if separator is too big compared to barWidth
-    this.barWidth = (((this.width - ((this.separator-1) * this.dataPoints))) / this.dataPoints)
+    this.barWidth = ((this.width - (this.separator * this.dataPoints)) / this.dataPoints)
     if (this.barWidth <= 1) {
       this.separator = Math.floor(this.separator/1.25)
       fixBarWidth.call(this)
