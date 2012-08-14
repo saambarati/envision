@@ -2,6 +2,10 @@
 var util = require('util')
   , Stream = require('stream')
 
+//TODO :
+//  consider using web sockets
+//  consider stopping and restarting web connection when memory consumption becomes too big
+//  build in error handling and restart connection when an error occures
 function JSONURLStream(url) {
   if (!(this instanceof JSONURLStream)) return new JSONURLStream(url)
   if (!url) throw new Error('url required')
