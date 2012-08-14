@@ -4,38 +4,6 @@ var Stream = require('stream')
   , http = require('http')
   , jsonURLStream = require('./JSONURLStream.js')
 
-/*
-(function() {
-  var req = new XMLHttpRequest()
-     , place = 0
-     , dataPoints = []
-     , buffer = []
-
-  function progress(evt) {
-    var data = req.responseText.slice(place)
-      , single
-      , i
-    place += data.length
-    data = data.split('\n')
-    for (i = data.length-2; i >= 0; i--) { //-2 b/c the final \n will be an empty string
-      single = JSON.parse(data[i])
-      buffer.push(single.val)
-    }
-    //draw(dataPoints)
-  }
-  req.addEventListener('progress', progress)
-  req.open('GET', 'http://localhost:8081/pipe', true)
-  req.send()
-  setInterval(function() {
-    if (!buffer.length) return
-    var ave = buffer.average()
-    dataPoints.unshift(0+ave)
-    draw(dataPoints)
-    buffer = []
-  }, 100)
-}())
-*/
-
 
 function DataStream(opts) {
   if (!(this instanceof DataStream)) return new DataStream(opts)

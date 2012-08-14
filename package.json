@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node ./example/app.js"
   },
+  "browserify" : "./frontend/browser-index.js",
   "dependencies" : {
     "browserify" : "*"
     , "profiles" : "*"

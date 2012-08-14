@@ -177,7 +177,7 @@ BarGraph.prototype.draw = function (val) {
     , transitionTime : self.transitionTime
     , intervalLength : self.barWidth + self.separator
     , text : function (d) { return '' + Math.floor(d.val) }
-    , fill : 'white'
+    , fill : 'gray'
   }
   drawText(self.ctx, textOpts, self.data)
 
@@ -233,12 +233,12 @@ CircleGraph.prototype.draw = function (buf) {
 
   rScale = d3.scale.linear()
              .domain([d3.min(d3Data, function(d) { return d[0] - self.separator }) , d3.max(d3Data, function(d) {  return d[0] + self.separator })])
-             .range([0, self.width/self.dataPoints/2])
+             .range([2, Math.min(self.width/self.dataPoints/2, self.height/2.5)])
   intervalLength = self.width/self.dataPoints
 
   toAll.cx = function (d, i) { return (i+1)*intervalLength - (intervalLength/2) }
   toAll.r = rScale
-  toAll.cy = self.width/2 - 10 - 0.5
+  toAll.cy = self.height/2 - 0.5
   toAll.text = function (d, i) { return d[1]+'=>'+Math.floor(d[0]) }
 
   chart.enter().append('circle')
@@ -250,36 +250,9 @@ CircleGraph.prototype.draw = function (buf) {
        .duration(t)
        .attr('r', function(d) { return toAll.r(d[0]) })
        .attr('cx', toAll.cx)
+       .attr('cy', toAll.cy)
 
   chart.exit().remove()
-
-  /*
-  chart = self.ctx.selectAll('text')
-              .data(d3Data)
- 
-  chart.enter().append('text')
-       .attr('x', function (d, i) { return intervalLength*i })
-       .attr('y', self.height - 30)
-       .attr('dy', '1.2em')
-       .attr('dx', intervalLength/2)
-       .attr('text-anchor', 'middle')
-       .attr('fill', 'steelBlue')
-       .text(toAll.text)
-       //.attr('opacity', 0)
-     .transition()
-       .duration(t)
-       .attr('x', function (d, i) { return intervalLength * i })
-       .attr('dx', intervalLength/2)
-
-  chart.transition()
-       .duration(t)
-       .attr('x', function (d, i) { return intervalLength*i })
-       .attr('dx', intervalLength/2)
-       .text(toAll.text)
-       //.attr('opacity', 1)
-
-  chart.exit().remove()
-  */
 
   var textOpts = {
     height : self.height

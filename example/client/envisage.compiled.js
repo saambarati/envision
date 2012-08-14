@@ -704,12 +704,12 @@ CircleGraph.prototype.draw = function (buf) {
 
   rScale = d3.scale.linear()
              .domain([d3.min(d3Data, function(d) { return d[0] - self.separator }) , d3.max(d3Data, function(d) {  return d[0] + self.separator })])
-             .range([0, self.width/self.dataPoints/2])
+             .range([2, Math.min(self.width/self.dataPoints/2, self.height/2.5)])
   intervalLength = self.width/self.dataPoints
 
   toAll.cx = function (d, i) { return (i+1)*intervalLength - (intervalLength/2) }
   toAll.r = rScale
-  toAll.cy = self.width/2 - 10 - 0.5
+  toAll.cy = self.height/2 - 0.5
   toAll.text = function (d, i) { return d[1]+'=>'+Math.floor(d[0]) }
 
   chart.enter().append('circle')
@@ -721,36 +721,9 @@ CircleGraph.prototype.draw = function (buf) {
        .duration(t)
        .attr('r', function(d) { return toAll.r(d[0]) })
        .attr('cx', toAll.cx)
+       .attr('cy', toAll.cy)
 
   chart.exit().remove()
-
-  /*
-  chart = self.ctx.selectAll('text')
-              .data(d3Data)
- 
-  chart.enter().append('text')
-       .attr('x', function (d, i) { return intervalLength*i })
-       .attr('y', self.height - 30)
-       .attr('dy', '1.2em')
-       .attr('dx', intervalLength/2)
-       .attr('text-anchor', 'middle')
-       .attr('fill', 'steelBlue')
-       .text(toAll.text)
-       //.attr('opacity', 0)
-     .transition()
-       .duration(t)
-       .attr('x', function (d, i) { return intervalLength * i })
-       .attr('dx', intervalLength/2)
-
-  chart.transition()
-       .duration(t)
-       .attr('x', function (d, i) { return intervalLength*i })
-       .attr('dx', intervalLength/2)
-       .text(toAll.text)
-       //.attr('opacity', 1)
-
-  chart.exit().remove()
-  */
 
   var textOpts = {
     height : self.height
@@ -1432,38 +1405,6 @@ var Stream = require('stream')
   , http = require('http')
   , jsonURLStream = require('./JSONURLStream.js')
 
-/*
-(function() {
-  var req = new XMLHttpRequest()
-     , place = 0
-     , dataPoints = []
-     , buffer = []
-
-  function progress(evt) {
-    var data = req.responseText.slice(place)
-      , single
-      , i
-    place += data.length
-    data = data.split('\n')
-    for (i = data.length-2; i >= 0; i--) { //-2 b/c the final \n will be an empty string
-      single = JSON.parse(data[i])
-      buffer.push(single.val)
-    }
-    //draw(dataPoints)
-  }
-  req.addEventListener('progress', progress)
-  req.open('GET', 'http://localhost:8081/pipe', true)
-  req.send()
-  setInterval(function() {
-    if (!buffer.length) return
-    var ave = buffer.average()
-    dataPoints.unshift(0+ave)
-    draw(dataPoints)
-    buffer = []
-  }, 100)
-}())
-*/
-
 
 function DataStream(opts) {
   if (!(this instanceof DataStream)) return new DataStream(opts)
@@ -1973,66 +1914,15 @@ module.exports = JSONURLStream
 exports.JSONURLStream = JSONURLStream
 });
 
-require.define("/example.js",function(require,module,exports,__dirname,__filename,process){
-/*global $:true, jQuery:true, console:true, document:true, window:true, d3:true, XMLHttpRequest:true,  */
+require.define("/browser-index.js",function(require,module,exports,__dirname,__filename,process){//file that will be compiled by browserify
 
-//var jQuery = $
-$(document).ready(function() {
-  console.log('about to start stream')
-  var graphStream = require('./graphStream.js')
-    , dataStream = require('./dataStream.js')
-    , opts
-    , graphOpts
-    , graphOpts2
-    , dStream
-    , circleOpts
-    , cDatOpts
+module.exports = {
+  graphStream : require('./graphStream.js')
+  , dataStream : require('./dataStream.js')
+  , _util : require('util')
+}
 
-  opts = {
-    url : '/pipe/'
-    //, averagingData : true
-    //, averageDataInterval : 2000
-  }
-
-  graphOpts = {
-    dataPoints : 10
-    , separator : 4
-    , height : 500
-    , width : 900
-    , selector : '#bar1'
-    , transitionTime : 750
-  }
-  graphOpts2 = {
-    dataPoints : 8
-    , separator : 1
-    , height : 500
-    , width : 900
-    , selector : '#bar2'
-    , transitionTime : 500
-  }
-
-  cDatOpts = {
-    url : '/pipecircle/'
-    , averagingData : true
-    , averageDataInterval : 1500
-  }
-
-  circleOpts = {
-    dataPoints : 4
-    , separator : 10
-    , height : 800
-    , width : 900
-    , selector : '#circle1'
-    , transitionTime : 1000
-  }
-  
-
-  dStream = dataStream(opts)
-  dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
-  dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
-
-  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts).filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6'))
-})
+if (window) window.envisage = module.exports
 });
-require("/example.js");
+require("/browser-index.js");
 })();
