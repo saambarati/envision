@@ -44,15 +44,13 @@ DataStream.prototype._begin = function() {
   var self = this
   self._req = jsonURLStream(self._url)
   self._req.on('data', function(buf) {
-    //console.log('res data === ' + buf)
-    //console.log('self._buffers.length === ' + self._buffers.length)
     if (self._averagingData) {
       self._averageDataBuf.push(buf)
     } else {
       self._buffers.push(buf)
       self._emitBuffers()
     }
-  }) 
+  })
   self._req.once('end', function() {
     self.emit('end')
   })
@@ -125,6 +123,7 @@ DataStream.prototype._clearAverages = function () {
     this._buffers.push(JSON.stringify(curValArr._original))
   }
   this._averageDataBuf = []
+  console.log('cleared interval :: rate=>' + this._averageDataInterval)
   this._emitBuffers() 
 }
 
