@@ -1,6 +1,9 @@
 
 var util = require('util')
   , Stream = require('stream')
+  , DEBUG = true
+  , debug = require('./utilities.js').debug
+
 
 //TODO :
 //  consider using web sockets
@@ -13,19 +16,27 @@ function JSONURLStream(url) {
   Stream.call(this)
   this.readable = true
   this.writable = false
-  this.paused = true
 
+  this._url = url
+  this.start()
+}
+util.inherits(JSONURLStream, Stream)
+
+JSONURLStream.prototype.start = function() {
   this._buffers = []
   this._place = 0
 
-  this._xhr = new XMLHttpRequest()
-  this._xhr.open('GET', url, true)
-  this._xhr.send()
-  this._xhr.addEventListener('progress', this.xhrProgress.bind(this))
+  var xhr = new XMLHttpRequest()
+  xhr.open('GET', this._url, true) //async
+  xhr.addEventListener('progress', this.xhrProgress.bind(this))
+  xhr.onreadystatechange = this.stateChange.bind(this)
+  xhr.send()
+  this._xhr = xhr
 
-  process.nextTick(this.resume.bind(this)) 
+  this.paused = true
+  process.nextTick(this.resume.bind(this))
+  debug('JSONURLStream start() method called')
 }
-util.inherits(JSONURLStream, Stream)
 
 JSONURLStream.prototype.xhrProgress = function(evt) {
   var data = this._xhr.responseText.slice(this._place)
@@ -33,6 +44,32 @@ JSONURLStream.prototype.xhrProgress = function(evt) {
   data = data.split('\n')
   this._buffers = this._buffers.concat(data)
   this._unloadBuffers()
+}
+
+JSONURLStream.prototype.stateChange = function() {
+  var x = XMLHttpRequest
+    , state = this._xhr.readyState
+  switch (state) {
+    case x.UNSENT :
+      debug('readystatechange : UNSENT')
+      break
+    case x.OPENED :
+      debug('readystatechange : OPENED')
+      break
+    case x.HEADERS_RECEIVED :
+      debug('readystatechange : HEADERS_RECEIVED')
+      break
+    case x.LOADING :
+      debug('readystatechange : LOADING')
+      break
+    case x.DONE :
+      debug('readystatechange : DONE')
+      this._unloadBuffers() //emit remaining data
+      this.start() //reconnect
+      break
+    default :
+      debug('unrecongized readystatechange :' + state)
+  }
 }
 
 JSONURLStream.prototype.pause = function() {
@@ -43,7 +80,7 @@ JSONURLStream.prototype.resume = function() {
   this._unloadBuffers()
 }
 JSONURLStream.prototype._unloadBuffers = function() {
-  var buf 
+  var buf
   while (this._buffers.length && !this.paused) {
     buf = this._buffers.shift()
     if (buf.length) this.emit('data', buf)

@@ -1455,7 +1455,7 @@ function DataStream(opts) {
 
   var intID
   if (this._averagingData) {
-    if (!this._averageDataInterval) throw new Error('to take an average of the incoming data, I need an "averageDataInterval"') 
+    if (!this._averageDataInterval) throw new Error('to take an average of the incoming data, I need an "averageDataInterval"')
     intID = setInterval(this._clearAverages.bind(this), this._averageDataInterval)
     this.once('end', function() {
       clearInterval(intID)
@@ -1489,7 +1489,7 @@ DataStream.prototype._begin = function() {
  //     self._buffers = self._buffers.concat(buf.split('\n'))
  //     console.log('self._buffers.length === ' + self._buffers.length)
  //     self._emitBuffers()
- //   }) 
+ //   })
 
  //   self._res.on('end', function() {
  //     self.emit('end')
@@ -1497,7 +1497,7 @@ DataStream.prototype._begin = function() {
  // })
 }
 
-DataStream.prototype.pause = function() { 
+DataStream.prototype.pause = function() {
   this.paused = true
 }
 
@@ -1541,7 +1541,7 @@ DataStream.prototype._clearAverages = function () {
     profileTypes[curBuf.name].push(curBuf.val)
   }
   //why isn't forEach supported by IE :(
-  objProps = Object.getOwnPropertyNames(profileTypes) 
+  objProps = Object.getOwnPropertyNames(profileTypes)
   for (i = 0; i < objProps.length; i++) {
     curValArr = profileTypes[objProps[i]]
     average = averageOfArray(curValArr)
@@ -1549,8 +1549,8 @@ DataStream.prototype._clearAverages = function () {
     this._buffers.push(JSON.stringify(curValArr._original))
   }
   this._averageDataBuf = []
-  console.log('cleared interval :: rate=>' + this._averageDataInterval)
-  this._emitBuffers() 
+  //console.log('cleared interval :: rate=>' + this._averageDataInterval)
+  this._emitBuffers()
 }
 
 
@@ -1897,6 +1897,9 @@ module.exports.ConcatStream = ConcatStream
 require.define("/frontend/JSONURLStream.js",function(require,module,exports,__dirname,__filename,process,global){
 var util = require('util')
   , Stream = require('stream')
+  , DEBUG = true
+  , debug = require('./utilities.js').debug
+
 
 //TODO :
 //  consider using web sockets
@@ -1909,19 +1912,27 @@ function JSONURLStream(url) {
   Stream.call(this)
   this.readable = true
   this.writable = false
-  this.paused = true
 
+  this._url = url
+  this.start()
+}
+util.inherits(JSONURLStream, Stream)
+
+JSONURLStream.prototype.start = function() {
   this._buffers = []
   this._place = 0
 
-  this._xhr = new XMLHttpRequest()
-  this._xhr.open('GET', url, true)
-  this._xhr.send()
-  this._xhr.addEventListener('progress', this.xhrProgress.bind(this))
+  var xhr = new XMLHttpRequest()
+  xhr.open('GET', this._url, true) //async
+  xhr.addEventListener('progress', this.xhrProgress.bind(this))
+  xhr.onreadystatechange = this.stateChange.bind(this)
+  xhr.send()
+  this._xhr = xhr
 
-  process.nextTick(this.resume.bind(this)) 
+  this.paused = true
+  process.nextTick(this.resume.bind(this))
+  debug('JSONURLStream start() method called')
 }
-util.inherits(JSONURLStream, Stream)
 
 JSONURLStream.prototype.xhrProgress = function(evt) {
   var data = this._xhr.responseText.slice(this._place)
@@ -1929,6 +1940,32 @@ JSONURLStream.prototype.xhrProgress = function(evt) {
   data = data.split('\n')
   this._buffers = this._buffers.concat(data)
   this._unloadBuffers()
+}
+
+JSONURLStream.prototype.stateChange = function() {
+  var x = XMLHttpRequest
+    , state = this._xhr.readyState
+  switch (state) {
+    case x.UNSENT :
+      debug('readystatechange : UNSENT')
+      break
+    case x.OPENED :
+      debug('readystatechange : OPENED')
+      break
+    case x.HEADERS_RECEIVED :
+      debug('readystatechange : HEADERS_RECEIVED')
+      break
+    case x.LOADING :
+      debug('readystatechange : LOADING')
+      break
+    case x.DONE :
+      debug('readystatechange : DONE')
+      this._unloadBuffers() //emit remaining data
+      this.start() //reconnect
+      break
+    default :
+      debug('unrecongized readystatechange :' + state)
+  }
 }
 
 JSONURLStream.prototype.pause = function() {
@@ -1939,7 +1976,7 @@ JSONURLStream.prototype.resume = function() {
   this._unloadBuffers()
 }
 JSONURLStream.prototype._unloadBuffers = function() {
-  var buf 
+  var buf
   while (this._buffers.length && !this.paused) {
     buf = this._buffers.shift()
     if (buf.length) this.emit('data', buf)
@@ -1948,6 +1985,20 @@ JSONURLStream.prototype._unloadBuffers = function() {
 
 module.exports = JSONURLStream
 exports.JSONURLStream = JSONURLStream
+
+});
+
+require.define("/frontend/utilities.js",function(require,module,exports,__dirname,__filename,process,global){
+exports.DEBUG = true
+
+if (exports.DEBUG) {
+  exports.debug = function() {
+    console.log.apply(console, ['DEBUG: '].concat([].slice.call(arguments)))
+  }
+} else {
+  exports.debug = function() {}
+}
+
 
 });
 
