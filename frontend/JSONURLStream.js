@@ -49,6 +49,7 @@ JSONURLStream.prototype.xhrProgress = function(evt) {
 JSONURLStream.prototype.stateChange = function() {
   var x = XMLHttpRequest
     , state = this._xhr.readyState
+
   switch (state) {
     case x.UNSENT :
       debug('readystatechange : UNSENT')
