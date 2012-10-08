@@ -1,10 +1,10 @@
 
-/*global $:true, jQuery:true, console:true, document:true, window:true, d3:true, XMLHttpRequest:true, envisage:true,  */
+/*global $:true, jQuery:true, console:true, document:true, window:true, d3:true, XMLHttpRequest:true, envision:true,  */
 
-$(document).ready(function() {
+function begin() {
   console.log('about to start stream')
-  var graphStream = envisage.graphStream
-    , dataStream = envisage.dataStream
+  var graphStream = envision.graphStream
+    , dataStream = envision.dataStream
     , opts
     , graphOpts
     , graphOpts2
@@ -20,40 +20,38 @@ $(document).ready(function() {
 
   graphOpts = {
     dataPoints : 10
-    , separator : 4
-    , height : 500
-    , width : 900
     , selector : '#bar1'
-    , transitionTime : 750
-  }
-  graphOpts2 = {
-    dataPoints : 8
-    , separator : 1
-    , height : 250
-    , width : 350
-    , selector : '#bar2'
-    , transitionTime : 500
+    , height : 200
+    , width : 800
   }
 
   cDatOpts = {
     url : '/pipecircle/'
     , averagingData : true
-    , averageDataInterval : 1500
+    , averageDataInterval : 2000
   }
 
-  circleOpts = {
-    dataPoints : 4
-    , separator : 10
-    , height : 200
-    , width : 600
-    , selector : '#circle1'
-    , transitionTime : 1000
-  }
-  
 
   dStream = dataStream(opts)
-  dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
-  dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
+  //dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
+  //dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
 
-  dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
-})
+  //dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
+
+  var graph = envision.graph(graphOpts).filter('requestTime')
+  graph.draw('bar')
+       .attr('text', true)
+       .attr('dataPoints', 10)
+       .attr('transitionTime', 750)
+       .attr('separator', 2)
+  dStream.pipe(graph)
+
+  var cGraph = envision.graph({selector : '#circle1', height : 400, width: 800})
+  dataStream(cDatOpts).pipe(cGraph)
+  cGraph.draw('circle')
+        .attr('text', true)
+        .attr('transitionTime', 900)
+
+}
+
+$(document).ready(begin)

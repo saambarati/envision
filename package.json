@@ -1,24 +1,26 @@
 {
   "name": "envision",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "author": "saam barati <saambarati1@gmail.com>",
   "description": "stream data to a d3 visualization",
   "scripts": {
     "start": "node ./example/app.js"
   },
-  "browserify" : "./frontend/browser-index.js",
-  "dependencies" : {
-    "browserify" : "*"
-    , "profiles" : "*"
+  "browserify": "./frontend/browser-index.js",
+  "dependencies": {
+    "profiles": "*"
+    , "d3" : "2.x.x"
   },
-  "devDependencies" : {
-    "logStream" : "*"
-    , "tako" : "*"
-    , "request" : "*"
+  "devDependencies": {
+    "logStream": "*",
+    "tako": "*",
+    "request": "*",
+    "browserify": "*"
   },
-  "engines" : {
-    "node" : "v0.8.x"
-    , "npm" : "1.1.x"
+  "engines": {
+    "node": "v0.8.x",
+    "npm": "1.1.x"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "subdomain": "envision"
 }
