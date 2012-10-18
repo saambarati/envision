@@ -1,18 +1,20 @@
 
-/*global $:true, jQuery:true, console:true, document:true, window:true, d3:true, XMLHttpRequest:true,  */
+/*global console:true, document:true, window:true, d3:true, XMLHttpRequest:true,  */
 
 var Stream = require('stream')
   , util = require('util')
+  , _u = require('./utilities')
 
 
-/*
+/**
  * High level overview of classes:
  *
  * GraphStream is a writable stream that takes incoming JSON buffers and parses through them
- * GraphStream calls the method `draw` when its own `write` method is called. `draw` is meant to be implemented by its subclasses
- * 
- * Graph is a subclass of GraphStream and it is also meant to be subclassed. 
- * Graph just provides a unified interface for some basic attributes that all Graphs are expected to have such as {width, height, DOM selector, etc}
+ * GraphStream contains references to subclasses of the Graph class which is the class responsible for displaying data fed to it by GraphStream
+ *
+ * GraphStream's graph method returns subclasses of graph
+ *
+ * exports.graph is a function that returns a GraphStream object
 */
 
 //opts are passed down to Graph object
@@ -28,7 +30,7 @@ function GraphStream(opts) {
   this._filters = []
   //display info
   this.data = {}
-  this.drawingQueue = []
+  this.drawingQueue = {} //items needs to be drawn
   this.initOpts = opts
 
   //TODO: if contains %, query width and adjust to pixels
@@ -67,28 +69,36 @@ GraphStream.prototype.drawRoutine = function(buf) {
   this.data[buf.name].push(buf)
   //console.log('incoming graph data  ' + JSON.stringify(buf))
   var graph
-  for (var i = 0; i < this.drawingQueue.length; i++) {
-    graph = this.drawingQueue[i]
-    if (!graph._filters.length || graph._filters.indexOf(buf.name) !== -1) {
-      graph.display(this.ctx, this.data)
-      if (graph.text) graph.displayText(this.ctx, this.data)
-    }
+    , i
+    , keys = Object.getOwnPropertyNames(this.drawingQueue)
+    , prop
+  for (i = 0; i < keys.length; i++) {
+    prop = keys[i]
+    graph = this.drawingQueue[prop]
+    graph.display(this.ctx, this.data)
+    if (graph.text) graph.displayText(this.ctx, this.data)
   }
 }
+
+GraphStream.prototype.graph = function(key) {
+  return this.drawingQueue[key]
+}
+
+//constructors
 var graphTypeMap = {
   'bar' : BarGraph
   , 'circle' : CircleGraph
 }
 
 GraphStream.prototype.draw = function(type, opts) {
+  type = type.toLowerCase()
   var GraphType = graphTypeMap[type] //cunstructor
     , graph
-  if (!GraphType) throw new Error('there is no graph type '+type)
+  if (!GraphType) throw new Error('there is no graph type ' + type)
   if (!opts) opts = {}
-  var initOpts = shallowCopy(this.initOpts) 
-  appendPropertiesFrom.call(initOpts, opts)  //override properties in initOpts from opts
-  graph = new GraphType(initOpts)
-  this.drawingQueue.push(graph)
+  _u.copyDefaults(this.initOpts, opts)  //override properties in initOpts from opts
+  graph = new GraphType(opts)
+  this.drawingQueue[type] = graph
 
   return graph
 }
@@ -96,10 +106,10 @@ GraphStream.prototype.draw = function(type, opts) {
 exports.GraphStream = GraphStream
 
 
-/*
+/**
  * opts  =>
  *   width      : svg context width :: default 800
- *   height     : svg context height :: default 800 
+ *   height     : svg context height :: default 800
  *   selector   : #div, html el :: <body> default
  *   className  : .class for css :: 'graph' default
  *   dataPoints : number of dataPoints expected in the graph :: default 15
@@ -108,19 +118,27 @@ exports.GraphStream = GraphStream
 function Graph (opts) {
   if (!(this instanceof Graph)) return new Graph(opts)
 
+  var optDefaults = {
+    width : '800'
+    , height : '800'
+    , dataPoints : 0
+    , separator : 0
+    , transitionTime : 750
+  }
+  , self = this
+
   if (!opts) opts = {}
-
-  this.width = opts.width || '800'
-  this.height = opts.height || '800'
-  this.dataPoints = opts.dataPoints || 0
-  this.separator = opts.separator || 0
-  this.transitionTime = opts.transitionTime || 750
-
-  this._filters = []
+  _u.copyDefaults(optDefaults, opts)   //append default options to defaults
+  //Object.getOwnPropertyNames(opts).forEach(function(prop) {
+  //  self.attr(prop, opts[prop])
+  //})
+  _u.appendPropertiesFrom(opts, this)  //append all of opts's properties to 'this'
+  //debugger
 }
 
 Graph.prototype.attr = function(name, val) {
   this[name] = val
+  _u.debug('this['+name+']' + ' = ' + val)
   return this
 }
 
@@ -136,18 +154,10 @@ function BarGraph(opts) {
   Graph.call(this, opts)
 
   //this.data = d3.range(this.dataPoints).map(function() { return {val:0, name:'dummy'} }) //dummy data
-  this.separator = opts.separator || 1 
+  this.separator = opts.separator || 1
+  self = this
 
   //this.barWidth = (this.width / this.dataPoints) - (this.separator * this.dataPoints)
-  function fixBarWidth() { //if separator is too big compared to barWidth
-    this.barWidth = ((this.width - (this.separator * this.dataPoints)) / this.dataPoints)
-    if (this.barWidth < 1) {
-      this.separator = Math.floor(this.separator/1.25)
-      fixBarWidth.call(this)
-    }
-  }
-
-  fixBarWidth.call(this) //adjust bar width to not be less than 1 px
 
 }
 util.inherits(BarGraph, Graph)
@@ -168,9 +178,18 @@ BarGraph.prototype.display = function(ctx, data) {
     , toAll
     , min
     , max
+  //ensure separator isn't too big compared to barWidth. i.e barWidth must be at least 1 px
+  (function fixBarWidth() {
+    self.barWidth = ((self.width - (self.separator * self.dataPoints)) / self.dataPoints)
+    self.barWidth = Math.floor(self.barWidth)
+    if (self.barWidth < 1) {
+      self.separator = Math.floor(self.separator/1.25)
+      fixBarWidth()
+    }
+  })()
 
   data = self.unpackData(data)
-  min = d3.min(data, function(d) { return d.val }) 
+  min = d3.min(data, function(d) { return d.val })
   max = d3.max(data, function(d) { return d.val })
   xScale = d3.scale.linear()
              .domain([0, data.length])
@@ -182,7 +201,7 @@ BarGraph.prototype.display = function(ctx, data) {
   toAll = {
     'x' : function(d, i) { return i*self.barWidth + i*self.separator - 0.5}
     , 'y' : function (d) { return self.height - yScale(d.val) - 0.5 }
-    , 'width' : function () { return self.barWidth - 0.5 } 
+    , 'width' : function () { return self.barWidth - 0.5 }
     , 'height' : function(d) { return yScale(d.val) - 0.5 }  //TODO : look into anti-aliasing prevention
   }
 
@@ -216,7 +235,7 @@ BarGraph.prototype.display = function(ctx, data) {
 BarGraph.prototype.displayText = function (ctx, data) {
   data = this.unpackData(data)
   var self = this
-    , textOpts 
+    , textOpts
   textOpts = {
     height : self.height
     , width : self.width
@@ -240,15 +259,17 @@ util.inherits(CircleGraph, Graph)
 
 CircleGraph.prototype.unpackData = function (data) {
   var d3Data = []
+    , avg
   Object.getOwnPropertyNames(data).forEach(function(key) {
-    d3Data.push(averageOfArray(data[key], function(d) { return d.val }))
+    avg = _u.averageOfArray(data[key], function(d) { return d.val })
+    d3Data.push(avg)
   })
   return d3Data
 }
 
 CircleGraph.prototype.display = function (ctx, data) {
   var self = this
-   , d3Data
+    , d3Data
     , chart
     , rScale
     , xScale
@@ -258,7 +279,6 @@ CircleGraph.prototype.display = function (ctx, data) {
     , min
     , max
 
-
   self.dataPoints = Object.getOwnPropertyNames(data).length
   //create new array with averages of values under each buf.name
   d3Data = this.unpackData(data)
@@ -266,9 +286,9 @@ CircleGraph.prototype.display = function (ctx, data) {
   chart = ctx.selectAll('circle')
              .data(d3Data)
 
-  min = d3.min(d3Data, function(d) { return d - self.separator }) 
-  max = d3.max(d3Data, function(d) {  return d + self.separator })  
-       
+  min = d3.min(d3Data, function(d) { return d - self.separator })
+  max = d3.max(d3Data, function(d) {  return d + self.separator })
+
   rScale = d3.scale.linear()
              .domain([min - 5, max + 5])
              .range([2, Math.min(self.width/self.dataPoints/2, self.height/2.5)])
@@ -296,7 +316,7 @@ CircleGraph.prototype.display = function (ctx, data) {
 CircleGraph.prototype.displayText = function (ctx, data) {
   data = this.unpackData(data)
   var self = this
-    , textOpts 
+    , textOpts
   textOpts = {
     height : self.height
     , width : self.width
@@ -319,7 +339,7 @@ function drawText(ctx, opts, data) {
 
   chart =  ctx.selectAll('text')
               .data(data)
- 
+
   chart.enter().append('text')
        .attr('x', opts.x || function (d, i) { return intervalLength*i })
        .attr('y', opts.y || (opts.height - 28))
@@ -341,45 +361,6 @@ function drawText(ctx, opts, data) {
        .text(opts.text)
 
   chart.exit().remove()
-}
-
-
-/*
- * utilities
-*/
-
-function averageOfArray (arr, func) {
-  if (!func) func = function(d) { return d }
-  for (var i = 0, sum = 0; i < arr.length; i++) {
-    sum += 0 + func(arr[i])
-  }
-  return sum / arr.length
-}
-
-//function must be called with 'this' mapped to the object you want altered
-//already exisiting keys will be overridden
-function appendPropertiesFrom(obj) {
-  var keys = Object.getOwnPropertyNames(obj)
-    , key
-    , i
-  for (i = 0; i < keys.length; i++) {
-    key = keys[i]
-    this[key] = obj[key]  
-  }
-}
-
-//copy 1 layer deep in the object
-function shallowCopy(obj) {
-  var ret = {}
-    , keys = Object.getOwnPropertyNames(obj)
-    , key
-    , i
-  for (i = 0; i < keys.length; i++) {
-    key = keys[i]
-    ret[key] = obj[key]
-  }
-
-  return ret
 }
 
 

@@ -12,46 +12,38 @@ function begin() {
     , circleOpts
     , cDatOpts
 
-  opts = {
-    url : '/pipe/'
-    //, averagingData : true
-    //, averageDataInterval : 2000
-  }
-
   graphOpts = {
-    dataPoints : 10
-    , selector : '#bar1'
+    selector : '#bar1'
+    //, dataPoints : 10
     , height : 200
     , width : 800
   }
+  var aGS = envision.graph(graphOpts).filter('requestTime')
+  aGS.draw('bar') //returns Graph object
+    .attr('text', true)
+    .attr('dataPoints', 10)
+    .attr('transitionTime', 750)
+    .attr('separator', 2)
+  dStream = dataStream('/pipe')
+  dStream.pipe(aGS)
+
+  //this dynamic transition doesn't work properly, work on fixing it
+ // setTimeout(function() {
+ //   aGS.graph('bar') //access 'bar' graph from earlier
+ //     .attr('dataPoints', 20)
+ // }, 10000) //after 10 seconds, increase datapoints
+
+  var cGS = envision.graph({selector : '#circle1', height : 400, width: 800}) //circle
+  cGS.draw('circle') //.draw() called on graphStream returns a Graph object
+    .attr('text', true)
+    .attr('transitionTime', 900)
 
   cDatOpts = {
-    url : '/pipecircle/'
+    url : '/pipecircle'
     , averagingData : true
     , averageDataInterval : 2000
   }
-
-
-  dStream = dataStream(opts)
-  //dStream.pipe(graphStream.BarGraph(graphOpts).filter('requestTime'))
-  //dStream.pipe(graphStream.BarGraph(graphOpts2).filter('requestTime'))
-
-  //dataStream(cDatOpts).pipe(graphStream.CircleGraph(circleOpts))
-
-  var graph = envision.graph(graphOpts).filter('requestTime')
-  graph.draw('bar')
-       .attr('text', true)
-       .attr('dataPoints', 10)
-       .attr('transitionTime', 750)
-       .attr('separator', 2)
-  dStream.pipe(graph)
-
-  var cGraph = envision.graph({selector : '#circle1', height : 400, width: 800})
-  dataStream(cDatOpts).pipe(cGraph)
-  cGraph.draw('circle')
-        .attr('text', true)
-        .attr('transitionTime', 900)
-
+  dataStream(cDatOpts).pipe(cGS)
 }
 
 $(document).ready(begin)

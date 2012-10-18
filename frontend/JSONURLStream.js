@@ -18,6 +18,8 @@ function JSONURLStream(url) {
   this.writable = false
 
   this._url = url
+  this._maxRetryCount = 30 //retry connection this many times
+  this._retryCount = 0
   this.start()
 }
 util.inherits(JSONURLStream, Stream)
@@ -41,7 +43,9 @@ JSONURLStream.prototype.start = function() {
 JSONURLStream.prototype.xhrProgress = function(evt) {
   var data = this._xhr.responseText.slice(this._place)
   this._place += data.length
-  data = data.split('\n')
+  data = data.split('\n').filter(function(buf) {
+    return buf.length > 0
+  })
   this._buffers = this._buffers.concat(data)
   this._unloadBuffers()
 }
@@ -49,6 +53,7 @@ JSONURLStream.prototype.xhrProgress = function(evt) {
 JSONURLStream.prototype.stateChange = function() {
   var x = XMLHttpRequest
     , state = this._xhr.readyState
+    , self = this
 
   switch (state) {
     case x.UNSENT :
@@ -59,14 +64,27 @@ JSONURLStream.prototype.stateChange = function() {
       break
     case x.HEADERS_RECEIVED :
       debug('readystatechange : HEADERS_RECEIVED')
+      debug('resetting retry count')
+      //TODO, should this be here in HEADERS_RECEIVED or under LOADING ?
+      self._retryCount = 0
       break
     case x.LOADING :
       debug('readystatechange : LOADING')
       break
     case x.DONE :
       debug('readystatechange : DONE')
+      debug('statusCode for url called: ' + this._xhr.status)
       this._unloadBuffers() //emit remaining data
-      this.start() //reconnect
+      //retry connection after 1 second
+      setTimeout(function() {
+        if (self._retryCount < self._maxRetryCount){
+          self._retryCount += 1
+          debug('retry count :' + self._retryCount)
+          self.start() //try to reconnect
+        } else {
+          debug('max retry limit reached')
+        }
+      }, 1000)
       break
     default :
       debug('unrecongized readystatechange :' + state)
@@ -83,8 +101,7 @@ JSONURLStream.prototype.resume = function() {
 JSONURLStream.prototype._unloadBuffers = function() {
   var buf
   while (this._buffers.length && !this.paused) {
-    buf = this._buffers.shift()
-    if (buf.length) this.emit('data', buf)
+    this.emit('data', this._buffers.shift())
   }
 }
 
