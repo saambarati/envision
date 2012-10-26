@@ -5,7 +5,7 @@ var tako = require('tako')
   , profiler = profiles()
   , request = require('request')
   , fs = require('fs')
-  , logger = logStream.create(console)
+  , logger = logStream()
   , app = tako()
   , PORT = 8081
   , path = require('path')
@@ -34,7 +34,7 @@ app.route('/pipecircle', function(req, res) {
   var endTime = 1000 * 60 * 2  //2 mins
   res.setHeader('content-type', 'x-json-stream')
   var s = profiles.PS(profiler, endTime).filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6')
-  //s.pipe(process.stdout) 
+  //s.pipe(process.stdout)
   s.pipe(res)
 })
 
