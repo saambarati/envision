@@ -424,14 +424,22 @@ function GraphStream(opts) {
   //display info
   this.data = {}
   this.drawingQueue = {} //items needs to be drawn
-  this.initOpts = opts
+  this._opts = opts
+
+  var defaults = {
+    selector : 'body'
+    , class : 'graph'
+  }
+  _u.copyDefaults(defaults, opts)
 
   //TODO: if contains %, query width and adjust to pixels
-  this.ctx = d3.select(opts.selector || 'body')
+  this.ctx = d3.select(opts.selector)
       .append('svg:svg')
-      .attr('class', opts.className || 'graph')
+      .attr('class', opts.class)
       .attr('width', opts.width)
       .attr('height', opts.height)
+
+  this._opts = opts
 }
 util.inherits(GraphStream, Stream)
 exports.graph = function (opts) {
@@ -490,7 +498,7 @@ GraphStream.prototype.draw = function(type, opts) {
     , graph
   if (!GraphType) throw new Error('there is no graph type ' + type)
   if (!opts) opts = {}
-  _u.copyDefaults(this.initOpts, opts)  //override properties in initOpts from opts
+  _u.copyDefaults(this._opts, opts)  //override properties in _opts from opts
   graph = new GraphType(opts)
   this.drawingQueue[type] = graph
 
@@ -528,17 +536,20 @@ function Graph (opts) {
 
   if (!opts) opts = {}
   _u.copyDefaults(optDefaults, opts)   //append default options to defaults
-  //Object.getOwnPropertyNames(opts).forEach(function(prop) {
-  //  self.attr(prop, opts[prop])
-  //})
   _u.appendPropertiesFrom(opts, this)  //append all of opts's properties to 'this'
-  //debugger
 }
 
 Graph.prototype.attr = function(name, val) {
   _u.nestedProperty(this, name, val) //assign property to value. this can be nested, i.e: this.text.color
   //this[name] = val
   _u.debug('this.' + name + ' = ' + val)
+  return this
+}
+
+Graph.prototype.title = function(title) {
+  _u.debug('this.selector (in Graph.prototype.title) => ' + this.selector)
+  var h1 = d3.select(this.selector).insert('h1', ':first-child')
+  h1.text(title)
   return this
 }
 
@@ -777,7 +788,8 @@ FrequencyGraph.prototype.display = function (ctx, data) {
   //the point here is that we don't have any lingering data with this method. We are continually presenting new data
   //so we do not need to continually query old data and re-enter new data.
   d3Data.forEach(function(dat, ix) {
-    if (dat === null) return //flag indicating data hasn't been updated
+    if (dat === null) return //flag indicating data hasn't been updated since last redraw
+
     ctx.append('svg:circle')
          .attr('r', toAll.r(dat) / 8)
          .attr('cx', toAll.cx(dat, ix))
