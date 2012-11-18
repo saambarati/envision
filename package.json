@@ -1,6 +1,6 @@
 {
   "name": "envision",
-  "version": "0.0.5",
+  "version": "0.0.5-6",
   "author": "saam barati <saambarati1@gmail.com>",
   "description": "stream data to a d3 visualization",
   "scripts": {
@@ -8,12 +8,12 @@
   },
   "browserify": "./frontend/browser-index.js",
   "dependencies": {
-    "profiles": "*"
-    , "d3" : "2.x.x"
+    "profiles": "*",
+    "d3": "2.x.x"
   },
   "devDependencies": {
     "logStream": "*",
-    "tako": "*",
+    "tako": "v0.3.x",
     "request": "*",
     "browserify": "*"
   },

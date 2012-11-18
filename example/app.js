@@ -14,10 +14,10 @@ app.route('/').html(function(req, res) {
   console.log('serving home page')
   res.setHeader('content-type', 'text/html')
   res.statusCode = 200
-  fs.createReadStream(path.join(__dirname, 'client/home.html')).pipe(res)
+  fs.createReadStream(path.join(__dirname, 'public/home.html')).pipe(res)
 })
 
-app.route('/client/*').files(path.join(__dirname, 'client'))
+app.route('/public/*').files(path.join(__dirname, 'public'))
 
 app.route('/pipe', function(req, res) {
   //res.setEncoding('ut8')
@@ -31,9 +31,18 @@ app.route('/pipe', function(req, res) {
 app.route('/pipecircle', function(req, res) {
   //res.setEncoding('ut8')
   console.log('beginning a data pipe for circle')
-  var endTime = 1000 * 60 * 2  //2 mins
+  var endTime = 1000 * 60 * 10  //10 mins
   res.setHeader('content-type', 'x-json-stream')
   var s = profiles.PS(profiler, endTime).filter('data1', 'data2', 'data3', 'data4', 'data5', 'data6')
+  //s.pipe(process.stdout)
+  s.pipe(res)
+})
+app.route('/pipefreq', function(req, res) {
+  //res.setEncoding('ut8')
+  console.log('beginning a data pipe for frequency')
+  var endTime = 1000 * 60 * 10  //10 mins
+  res.setHeader('content-type', 'x-json-stream')
+  var s = profiles.PS(profiler, endTime).filter('freq1', 'freq2', 'freq3', 'freq4', 'freq5', 'freq6')
   //s.pipe(process.stdout)
   s.pipe(res)
 })
@@ -49,6 +58,7 @@ setInterval(function() {
 
 app.httpServer.listen(PORT)
 
+//for bar graph
 function test() {
   var endFunc = profiler.beg('requestTime')
   request('http://nodejs.org', function(e, res, body) {
@@ -59,7 +69,15 @@ function test() {
 }
 test()
 
+//for freq graph
+for (var i = 1; i <= 6; i++) {
+  (function inner(t) {
+    var freq = Math.random()*3000
+    profiler.stat('freq'+t, {'freq' : freq, timestamp : Date.now() })
+    setTimeout(function() { inner(t) }, freq)
+  })(i)
+}
 
-console.log('open your browser to: "http://localhost:'+PORT+'"')
+logger.log('open your browser to: "http://localhost:'+PORT+'"')
 //console.log(__dirname)
 //console.log(__filename)

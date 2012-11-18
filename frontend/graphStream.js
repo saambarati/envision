@@ -35,7 +35,7 @@ function GraphStream(opts) {
 
   //TODO: if contains %, query width and adjust to pixels
   this.ctx = d3.select(opts.selector || 'body')
-      .append('svg')
+      .append('svg:svg')
       .attr('class', opts.className || 'graph')
       .attr('width', opts.width)
       .attr('height', opts.height)
@@ -76,7 +76,7 @@ GraphStream.prototype.drawRoutine = function(buf) {
     prop = keys[i]
     graph = this.drawingQueue[prop]
     graph.display(this.ctx, this.data)
-    if (graph.text) graph.displayText(this.ctx, this.data)
+    if (graph.text.display) graph.displayText(this.ctx, this.data)
   }
 }
 
@@ -88,6 +88,7 @@ GraphStream.prototype.graph = function(key) {
 var graphTypeMap = {
   'bar' : BarGraph
   , 'circle' : CircleGraph
+  , 'frequency' : FrequencyGraph
 }
 
 GraphStream.prototype.draw = function(type, opts) {
@@ -124,6 +125,11 @@ function Graph (opts) {
     , dataPoints : 0
     , separator : 0
     , transitionTime : 750
+    , text : {
+      display : true
+      , color : 'red'
+    }
+    , style : {fill : 'gray'}
   }
   , self = this
 
@@ -137,28 +143,22 @@ function Graph (opts) {
 }
 
 Graph.prototype.attr = function(name, val) {
-  this[name] = val
-  _u.debug('this['+name+']' + ' = ' + val)
+  _u.nestedProperty(this, name, val) //assign property to value. this can be nested, i.e: this.text.color
+  //this[name] = val
+  _u.debug('this.' + name + ' = ' + val)
   return this
 }
 
 Graph.prototype.unpackData = function (data) { return data } //method to be overwritten by subclasses
 
 
-/*
+/**
  *   separator : bar separator   :: default 1
 */
 function BarGraph(opts) {
   if (!(this instanceof BarGraph)) return new BarGraph(opts)
-
   Graph.call(this, opts)
-
-  //this.data = d3.range(this.dataPoints).map(function() { return {val:0, name:'dummy'} }) //dummy data
   this.separator = opts.separator || 1
-  self = this
-
-  //this.barWidth = (this.width / this.dataPoints) - (this.separator * this.dataPoints)
-
 }
 util.inherits(BarGraph, Graph)
 
@@ -208,15 +208,11 @@ BarGraph.prototype.display = function(ctx, data) {
   chart = ctx.selectAll('rect')
              .data(data)
 
-  chart.enter().append('rect')
+  chart.enter().append('svg:rect')
        .attr('x', function(d, i) { return toAll.x(d, i+1)})
        .attr('y', toAll.y)
        .attr('width', toAll.width)
        .attr('height', toAll.height)
-     .transition()
-       .duration(t)
-       .attr('x', function(d, i) { return toAll.x(d, i)})
-
 
   chart.transition()
        .duration(t)
@@ -242,7 +238,7 @@ BarGraph.prototype.displayText = function (ctx, data) {
     , transitionTime : self.transitionTime
     , intervalLength : self.barWidth + self.separator
     , text : function (d) { return '' + Math.floor(d.val) }
-    , fill : 'red'
+    , fill : self.text.color || 'red'
   }
 
   drawText(ctx, textOpts, data)
@@ -298,7 +294,7 @@ CircleGraph.prototype.display = function (ctx, data) {
   toAll.r = rScale
   toAll.cy = self.height/2 - 0.5
 
-  chart.enter().append('circle')
+  chart.enter().append('svg:circle')
        .attr('cx', toAll.cx)
        .attr('r', function(d) { return toAll.r(d) })
        .attr('cy', toAll.cy)
@@ -322,10 +318,91 @@ CircleGraph.prototype.displayText = function (ctx, data) {
     , width : self.width
     , transitionTime : self.transitionTime
     , text : function (d) { return '' + Math.floor(d) }
-    , fill : 'gray'
+    , fill : self.text.color
   }
 
   drawText(ctx, textOpts, data)
+}
+
+//inspired by: http://bl.ocks.org/1062544
+//A LOT of work still needs to be done on this.
+//how should we react to all the info being presented at once. The point of this graph is to reflect the frequency of the data
+//being streamed to us, but our stream recieves all of the data at once so it appears as if all the data has the same frequency. Maybe we should
+//use timestamps?
+//what should I do about displaying text
+function FrequencyGraph(opts) {
+  if (!(this instanceof FrequencyGraph)) return new FrequencyGraph(opts)
+  CircleGraph.call(this, opts)
+  this._timestamps = {}
+}
+util.inherits(FrequencyGraph, CircleGraph)
+
+FrequencyGraph.prototype.unpackData = function (data) {
+  var d3Data = []
+    , avg
+    , self = this
+  Object.getOwnPropertyNames(data).forEach(function(key, ix) {
+    var latest = data[key]
+    latest = latest[latest.length - 1].val //retrieve latest buffer's val attribute
+    if (latest.timestamp !== self._timestamps[key]) {
+      self._timestamps[key] = latest.timestamp //new update
+      d3Data.push(latest.freq)
+    } else {
+      d3Data.push(null) //flag indicate that data hasn't been updated
+    }
+  })
+  return d3Data
+}
+
+FrequencyGraph.prototype.display = function (ctx, data) {
+  var self = this
+    , d3Data
+    , chart
+    , rScale
+    , xScale
+    , toAll = {}
+    , intervalLength
+    , min
+    , max
+    , colorScale = d3.scale.category20c()
+
+  self.dataPoints = Object.getOwnPropertyNames(data).length
+  //create new array with averages of values under each buf.name
+  d3Data = this.unpackData(data)
+
+  min = d3.min(d3Data, function(d) { return d - self.separator })
+  max = d3.max(d3Data, function(d) {  return d + self.separator })
+
+  rScale = d3.scale.linear()
+             .domain([min - 5, max + 5])
+             .range([2, Math.min(self.width/self.dataPoints/2, self.height/2.5)])
+  intervalLength = self.width/self.dataPoints
+
+  toAll.cx = function (d, i) { return (i+1)*intervalLength - (intervalLength/2) }
+  toAll.r = rScale
+  toAll.cy = self.height/2 - 0.5
+  //the point here is that we don't have any lingering data with this method. We are continually presenting new data
+  //so we do not need to continually query old data and re-enter new data.
+  d3Data.forEach(function(dat, ix) {
+    if (dat === null) return //flag indicating data hasn't been updated
+    ctx.append('svg:circle')
+         .attr('r', toAll.r(dat) / 8)
+         .attr('cx', toAll.cx(dat, ix))
+         .attr('cy', toAll.cy)
+         .style('fill', 'white')
+         .style('stroke', colorScale(dat))
+         .style('stroke-opacity', 1)
+      .transition()
+         .duration(self.transitionTime)
+         .ease(Math.sqrt)
+         .attr('r', toAll.r(dat))
+         .style('stroke-opacity', 1e-4)
+         .attr('cx', toAll.cx(dat, ix))
+         .attr('cy', toAll.cy)
+         .remove()
+  })
+
+
 }
 
 function drawText(ctx, opts, data) {
@@ -337,16 +414,16 @@ function drawText(ctx, opts, data) {
 
   opts.text = opts.text || String
 
-  chart =  ctx.selectAll('text')
+  chart = ctx.selectAll('text')
               .data(data)
 
-  chart.enter().append('text')
+  chart.enter().append('svg:text')
        .attr('x', opts.x || function (d, i) { return intervalLength*i })
        .attr('y', opts.y || (opts.height - 28))
        .attr('dy', opts.dy || '1.2em')
        .attr('dx', opts.dx || (intervalLength/2))
        .attr('text-anchor', opts['text-anchor'] || 'middle')
-       .attr('fill', opts.fill || 'steelBlue')
+       .attr('fill', opts.fill || 'gray')
        .text(opts.text)
      .transition()
        .duration(t)

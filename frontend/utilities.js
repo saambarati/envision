@@ -50,20 +50,23 @@ function shallowCopy(obj) {
 }
 exports.shallowCopy = shallowCopy
 
-//i.e invoke(obj, 'hello.world.foo')
-//will return obj['hello']['world']['foo']
-function nestedProperty(obj, string) {
+/**
+ * invoke nestedProperty(obj, 'hello.world.foo', 'bar')
+ * will assign obj['hello']['world']['foo'] = 'bar'
+ */
+function nestedProperty(obj, string, value) {
   var nested = obj
     , portions = string.split('.')
-    , i
     , prop
+  exports.debug('nestedProperty portions: ' + portions)
+  while (portions.length) {
+    prop = portions.shift()
+    if (!portions.length) nested[prop] = value //reached last property
+    else nested = nested[prop]                 //continue nesting deeper
 
-  for (i = 0; i < portions.length; i++) {
-    prop = portions[i]
-    nested = nested[prop]
-    if (!nested) return null
+    //TODO: consider throwing an error here
+    if (!nested) return
   }
-  return nested
 }
 exports.nestedProperty = nestedProperty
 
