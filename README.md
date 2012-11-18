@@ -13,7 +13,4 @@ and
 
 check out: [`example.js`](https://github.com/saambarati/envision/blob/master/example/client/example.js)
 
-or
-
-
 More to come...

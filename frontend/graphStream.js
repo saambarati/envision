@@ -384,7 +384,8 @@ FrequencyGraph.prototype.display = function (ctx, data) {
   //the point here is that we don't have any lingering data with this method. We are continually presenting new data
   //so we do not need to continually query old data and re-enter new data.
   d3Data.forEach(function(dat, ix) {
-    if (dat === null) return //flag indicating data hasn't been updated
+    if (dat === null) return //flag indicating data hasn't been updated since last redraw
+
     ctx.append('svg:circle')
          .attr('r', toAll.r(dat) / 8)
          .attr('cx', toAll.cx(dat, ix))
