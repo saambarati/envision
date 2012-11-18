@@ -7,7 +7,7 @@ To get a feeling for what I am doing, when you clone this repo do
 
 or
 
-[`envision.jit.su`](envision.jit.su)
+[`envision.jit.su`](http://envision.jit.su)
 
 and
 
