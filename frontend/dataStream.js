@@ -2,7 +2,8 @@
 var Stream = require('stream')
   , util = require('util')
   , http = require('http')
-  , jsonURLStream = require('./JSONURLStream.js')
+  , jsonURLStream = require('./JSONURLStream')
+  , _u = require('./utilities')
 
 
 function DataStream(opts) {
@@ -11,8 +12,6 @@ function DataStream(opts) {
 
   if (typeof opts === 'string') {
     opts = {url : opts}
-    opts.averagingData = false
-    opts.averageDataInterval = Infinity
   }
 
   Stream.call(this)
@@ -22,16 +21,17 @@ function DataStream(opts) {
   this.paused = true
   this._url = opts.url
   this._req = null
-  this._averagingData = opts.averagingData
-  this._averageDataInterval = opts.averageDataInterval
+  this._averageDataInterval = opts.averageDataInterval || 0
+  this._averagingData = (this._averageDataInterval > 0)
   this._buffers = []
   this._averageDataBuf = []
 
   var intID
   if (this._averagingData) {
-    if (!this._averageDataInterval) throw new Error('to take an average of the incoming data, I need an "averageDataInterval"')
     intID = setInterval(this._clearAverages.bind(this), this._averageDataInterval)
+    _u.debug('averaging data in dataStream.js')
     this.once('end', function() {
+      _u.debug('clearing setInterval for averagingData in dataStream.js')
       clearInterval(intID)
     })
   }
@@ -55,6 +55,9 @@ DataStream.prototype._begin = function() {
     self.emit('end')
   })
 
+ //for browserify-http  I was having problems with getting this to be done well through streaming
+ //worth a revisit in the future
+ //
  // http.get({path:self._url}, function(res) {
  //   self._res = res
  //   self._res.on('data', function(buf) {

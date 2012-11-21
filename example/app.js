@@ -61,7 +61,7 @@ app.httpServer.listen(PORT)
 //for bar graph
 function test() {
   var endFunc = profiler.beg('requestTime')
-  request('http://nodejs.org', function(e, res, body) {
+  request('http://npmjs.org', function(e, res, body) {
     //console.log(endFunc())
     endFunc()
     setTimeout(test, 2000)
@@ -73,7 +73,7 @@ test()
 for (var i = 1; i <= 6; i++) {
   (function inner(t) {
     var freq = Math.random()*3000
-    profiler.stat('freq'+t, {'freq' : freq, timestamp : Date.now() })
+    profiler.stat('freq'+t,  Date.now() )
     setTimeout(function() { inner(t) }, freq)
   })(i)
 }

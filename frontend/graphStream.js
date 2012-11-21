@@ -49,7 +49,8 @@ function GraphStream(opts) {
   this._opts = opts
 }
 util.inherits(GraphStream, Stream)
-exports.graph = function (opts) {
+
+module.exports = function (opts) {
   return new GraphStream(opts)
 }
 
@@ -70,6 +71,26 @@ GraphStream.prototype.filter = function() {
   return this
 }
 
+/**
+ *
+ * buffer format (see http://github.com/saambarati/profiles  the format is taken from those \n delimited json) =>
+ * {
+ *   name : ...
+ *   val : ...
+ *   __profileType : ...
+ * }
+ *
+ * this.data format =>
+ * {
+ *   buffer.name_1 : [array]
+ *   buffer.name_2 : [array]
+ *   ...
+ *   buffer.name_last : [array]
+ * }
+ * basically for each incoming buffer, its buffer.name attribute represents a new array in our data hash
+ * everytime a buffer with that name is written to us, we push it on to the end of that buffer.name's array
+ *
+ */
 GraphStream.prototype.drawRoutine = function(buf) {
   if (!buf) return
 
@@ -88,20 +109,17 @@ GraphStream.prototype.drawRoutine = function(buf) {
   }
 }
 
-GraphStream.prototype.graph = function(key) {
-  return this.drawingQueue[key]
-}
 
 //constructors
-var graphTypeMap = {
+var graphConstructors = {
   'bar' : BarGraph
   , 'circle' : CircleGraph
   , 'frequency' : FrequencyGraph
 }
 
-GraphStream.prototype.draw = function(type, opts) {
+GraphStream.prototype.graph = function(type, opts) {
   type = type.toLowerCase()
-  var GraphType = graphTypeMap[type] //cunstructor
+  var GraphType = graphConstructors[type] //cunstructor
     , graph
   if (!GraphType) throw new Error('there is no graph type ' + type)
   if (!opts) opts = {}
@@ -112,7 +130,10 @@ GraphStream.prototype.draw = function(type, opts) {
   return graph
 }
 
-exports.GraphStream = GraphStream
+GraphStream.prototype.getGraph = function(key) {
+  return this.drawingQueue[key]
+}
+
 
 
 /**
@@ -132,23 +153,30 @@ function Graph (opts) {
     , height : '800'
     , dataPoints : 0
     , separator : 0
-    , transitionTime : 750
     , text : {
-      display : true
-      , color : 'red'
+       display : true
+       , color : 'black'
     }
-    , style : {fill : 'gray'}
+    , style : {
+       fill : 'gray'
+       , stroke : 'black'
+    }
+    , transition : {
+       style : {}
+       , ease : function (x) { return x }
+       , duration : 750
+    }
   }
   , self = this
 
   if (!opts) opts = {}
+  //TODO, copyDefaults is shallow, make it a deep copy of objects
   _u.copyDefaults(optDefaults, opts)   //append default options to defaults
   _u.appendPropertiesFrom(opts, this)  //append all of opts's properties to 'this'
 }
 
 Graph.prototype.attr = function(name, val) {
   _u.nestedProperty(this, name, val) //assign property to value. this can be nested, i.e: this.text.color
-  //this[name] = val
   _u.debug('this.' + name + ' = ' + val)
   return this
 }
@@ -185,7 +213,7 @@ BarGraph.prototype.display = function(ctx, data) {
     , xScale
     , yScale
     , chart
-    , t = self.transitionTime
+    , t = self.transition.duration
     , toAll
     , min
     , max
@@ -224,12 +252,15 @@ BarGraph.prototype.display = function(ctx, data) {
        .attr('y', toAll.y)
        .attr('width', toAll.width)
        .attr('height', toAll.height)
+  _u.applyStylesToD3Graph(Object.getOwnPropertyNames(self.style), self.style, chart)
 
   chart.transition()
        .duration(t)
+       .ease(self.transition.ease)
        .attr('x', function(d,i) { return toAll.x(d, i) })
        .attr('y', toAll.y)
        .attr('height', toAll.height)
+  _u.applyStylesToD3Graph(Object.getOwnPropertyNames(self.transition.style), self.transition.style, chart)
 
   chart.exit()
        .transition()
@@ -246,7 +277,7 @@ BarGraph.prototype.displayText = function (ctx, data) {
   textOpts = {
     height : self.height
     , width : self.width
-    , transitionTime : self.transitionTime
+    , transitionTime : self.transition.duration
     , intervalLength : self.barWidth + self.separator
     , text : function (d) { return '' + Math.floor(d.val) }
     , fill : self.text.color || 'red'
@@ -282,7 +313,6 @@ CircleGraph.prototype.display = function (ctx, data) {
     , xScale
     , toAll = {}
     , intervalLength
-    , t = self.transitionTime
     , min
     , max
 
@@ -309,12 +339,15 @@ CircleGraph.prototype.display = function (ctx, data) {
        .attr('cx', toAll.cx)
        .attr('r', function(d) { return toAll.r(d) })
        .attr('cy', toAll.cy)
+  _u.applyStylesToD3Graph(Object.getOwnPropertyNames(self.style), self.style, chart) //apply styles to graph
 
   chart.transition()
-       .duration(t)
+       .duration(self.transition.duration)
+       .ease(self.transition.ease)
        .attr('r', function(d) { return toAll.r(d) })
        .attr('cx', toAll.cx)
        .attr('cy', toAll.cy)
+  _u.applyStylesToD3Graph(Object.getOwnPropertyNames(self.transition.style), self.transition.style, chart) //apply styles to graph
 
   chart.exit().remove()
 
@@ -327,7 +360,7 @@ CircleGraph.prototype.displayText = function (ctx, data) {
   textOpts = {
     height : self.height
     , width : self.width
-    , transitionTime : self.transitionTime
+    , transitionTime : self.transition.duration
     , text : function (d) { return '' + Math.floor(d) }
     , fill : self.text.color
   }
@@ -335,7 +368,7 @@ CircleGraph.prototype.displayText = function (ctx, data) {
   drawText(ctx, textOpts, data)
 }
 
-//inspired by: http://bl.ocks.org/1062544
+//inspired by => http://bl.ocks.org/1062544
 //A LOT of work still needs to be done on this.
 //how should we react to all the info being presented at once. The point of this graph is to reflect the frequency of the data
 //being streamed to us, but our stream recieves all of the data at once so it appears as if all the data has the same frequency. Maybe we should
@@ -343,21 +376,51 @@ CircleGraph.prototype.displayText = function (ctx, data) {
 //what should I do about displaying text
 function FrequencyGraph(opts) {
   if (!(this instanceof FrequencyGraph)) return new FrequencyGraph(opts)
+  var defaults = {
+    transition : {
+      ease : Math.sqrt
+      , duration : 3000
+      , style : {
+        'stroke-opacity' : 1e-4
+      }
+    }
+    , style : {
+       fill : 'white'
+       , stroke : 'gray'
+       , 'stroke-opacity' : 1
+    }
+  }
+  opts = opts || {}
+  _u.copyDefaults(defaults, opts)
   CircleGraph.call(this, opts)
   this._timestamps = {}
 }
 util.inherits(FrequencyGraph, CircleGraph)
 
+/**
+ *
+ * format =>
+ * {
+ *   name : ...
+ *   __type : ...
+ *   (important part)
+ *   val : timestamp
+ * }
+ *
+ * if timestamp hasn't changed since last display call, we will not update with a circle
+ *
+ */
 FrequencyGraph.prototype.unpackData = function (data) {
   var d3Data = []
     , avg
     , self = this
-  Object.getOwnPropertyNames(data).forEach(function(key, ix) {
-    var latest = data[key]
-    latest = latest[latest.length - 1].val //retrieve latest buffer's val attribute
-    if (latest.timestamp !== self._timestamps[key]) {
-      self._timestamps[key] = latest.timestamp //new update
-      d3Data.push(latest.freq)
+  Object.getOwnPropertyNames(data).forEach(function(key) {
+    var arr = data[key]
+      , timestamp
+    timestamp = arr[arr.length - 1].val //retrieve latest buffer's val attribute. this is assumed to be a timeStamp.
+    if (timestamp !== self._timestamps[key]) {
+      self._timestamps[key] = timestamp //new update to particular timestamp key
+      d3Data.push(timestamp)
     } else {
       d3Data.push(null) //flag indicate that data hasn't been updated
     }
@@ -376,8 +439,10 @@ FrequencyGraph.prototype.display = function (ctx, data) {
     , min
     , max
     , colorScale = d3.scale.category20c()
+    , styles
+    , transitionStyles
 
-  self.dataPoints = Object.getOwnPropertyNames(data).length
+  self.dataPoints = Object.getOwnPropertyNames(self._timestamps).length
   //create new array with averages of values under each buf.name
   d3Data = this.unpackData(data)
 
@@ -394,27 +459,53 @@ FrequencyGraph.prototype.display = function (ctx, data) {
   toAll.cy = self.height/2 - 0.5
   //the point here is that we don't have any lingering data with this method. We are continually presenting new data
   //so we do not need to continually query old data and re-enter new data.
+  styles = Object.getOwnPropertyNames(self.style)
+  transitionStyles = Object.getOwnPropertyNames(self.transition.style)
+
   d3Data.forEach(function(dat, ix) {
     if (dat === null) return //flag indicating data hasn't been updated since last redraw
 
-    ctx.append('svg:circle')
+    var graph = ctx.append('svg:circle')
          .attr('r', toAll.r(dat) / 8)
          .attr('cx', toAll.cx(dat, ix))
          .attr('cy', toAll.cy)
-         .style('fill', 'white')
-         .style('stroke', colorScale(dat))
-         .style('stroke-opacity', 1)
-      .transition()
-         .duration(self.transitionTime)
-         .ease(Math.sqrt)
-         .attr('r', toAll.r(dat))
-         .style('stroke-opacity', 1e-4)
-         .attr('cx', toAll.cx(dat, ix))
-         .attr('cy', toAll.cy)
-         .remove()
+
+    _u.applyStylesToD3Graph(styles, self.style, graph) //apply styles to graph
+
+    graph = graph.transition()
+       .duration(self.transition.duration)
+       .ease(self.transition.ease)
+       .attr('r', toAll.r(dat))
+       .attr('cx', toAll.cx(dat, ix))
+       .attr('cy', toAll.cy)
+
+    _u.applyStylesToD3Graph(transitionStyles, self.transition.style, graph) //apply transition.styles
+    graph.remove()
   })
 
 
+}
+
+FrequencyGraph.prototype.displayText = function (ctx, data) {
+  var self = this
+    , textOpts
+    , textData = []
+  Object.getOwnPropertyNames(data).forEach(function(prop) {
+    var arr = data[prop]
+      , dt
+    //strictly speaking, this number isn't the frequency, but rather DeltaTime. Consider using an actual frequency in hertz or such
+    if (arr.length > 1) dt = arr[arr.length - 1].val - arr[arr.length - 2].val
+    else dt = ''
+    textData.push(dt) //push the difference between the last two values. i.e the delta
+  })
+  textOpts = {
+    height : self.height
+    , width : self.width
+    , transitionTime : self.transition.time
+    , fill : self.text.color
+  }
+
+  drawText(ctx, textOpts, textData)
 }
 
 function drawText(ctx, opts, data) {

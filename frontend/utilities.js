@@ -71,10 +71,34 @@ function nestedProperty(obj, string, value) {
 exports.nestedProperty = nestedProperty
 
 //copy over defaults
-function copyDefaults(def, opt) {
+//TODO, write a test for this
+function copyDefaults(def, opts) {
   Object.getOwnPropertyNames(def).forEach(function(prop) {
-    if (!opt[prop]) opt[prop] = def[prop]
+    if (!opts[prop]) opts[prop] = def[prop]
+    else if (typeof opts[prop] === 'object' && def[prop]) { //apply to sub properties of object
+      exports.debug('recursing deeper on copying objects with prop: ' + prop)
+      copyDefaults(def[prop], opts[prop])
+    }
   })
 }
 exports.copyDefaults = copyDefaults
+
+
+//apply given array of styles to a d3 context
+//styles is a list of properties that belong to fromOpts
+function applyStylesToD3Graph (styles, fromOpts, ctx) {
+  var aStyle
+    , i
+  for (i = 0; i < styles.length; i++) {
+    aStyle = styles[i]
+    ctx.style(aStyle, fromOpts[aStyle])
+  }
+}
+exports.applyStylesToD3Graph = applyStylesToD3Graph
+
+
+
+
+
+
 

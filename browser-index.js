@@ -1,9 +1,8 @@
 //file that will be compiled by browserify
 
 module.exports = {
-  graph : require('./frontend/graphStream').graph
+  graphStream : require('./frontend/graphStream') //TODO, should I call this graphStream, or graphContext?
   , dataStream : require('./frontend/dataStream')
-  , _util : require('util')
 }
 
 if (window) {

@@ -442,8 +442,7 @@ function GraphStream(opts) {
   this._opts = opts
 }
 util.inherits(GraphStream, Stream)
-
-module.exports = function (opts) {
+exports.graphStream = function (opts) {
   return new GraphStream(opts)
 }
 
@@ -464,26 +463,6 @@ GraphStream.prototype.filter = function() {
   return this
 }
 
-/**
- *
- * buffer format (see http://github.com/saambarati/profiles  the format is taken from those \n delimited json) =>
- * {
- *   name : ...
- *   val : ...
- *   __profileType : ...
- * }
- *
- * this.data format =>
- * {
- *   buffer.name_1 : [array]
- *   buffer.name_2 : [array]
- *   ...
- *   buffer.name_last : [array]
- * }
- * basically for each incoming buffer, its buffer.name attribute represents a new array in our data hash
- * everytime a buffer with that name is written to us, we push it on to the end of that buffer.name's array
- *
- */
 GraphStream.prototype.drawRoutine = function(buf) {
   if (!buf) return
 
@@ -504,7 +483,7 @@ GraphStream.prototype.drawRoutine = function(buf) {
 
 
 //constructors
-var graphConstructors = {
+var graphTypeMap = {
   'bar' : BarGraph
   , 'circle' : CircleGraph
   , 'frequency' : FrequencyGraph
@@ -512,7 +491,7 @@ var graphConstructors = {
 
 GraphStream.prototype.graph = function(type, opts) {
   type = type.toLowerCase()
-  var GraphType = graphConstructors[type] //cunstructor
+  var GraphType = graphTypeMap[type] //cunstructor
     , graph
   if (!GraphType) throw new Error('there is no graph type ' + type)
   if (!opts) opts = {}
@@ -527,6 +506,7 @@ GraphStream.prototype.getGraph = function(key) {
   return this.drawingQueue[key]
 }
 
+exports.GraphStream = GraphStream
 
 
 /**
@@ -548,7 +528,7 @@ function Graph (opts) {
     , separator : 0
     , text : {
        display : true
-       , color : 'black'
+       , color : 'red'
     }
     , style : {
        fill : 'gray'
@@ -790,30 +770,16 @@ function FrequencyGraph(opts) {
 }
 util.inherits(FrequencyGraph, CircleGraph)
 
-/**
- *
- * format =>
- * {
- *   name : ...
- *   __type : ...
- *   (important part)
- *   val : timestamp
- * }
- *
- * if timestamp hasn't changed since last display call, we will not update with a circle
- *
- */
 FrequencyGraph.prototype.unpackData = function (data) {
   var d3Data = []
     , avg
     , self = this
-  Object.getOwnPropertyNames(data).forEach(function(key) {
-    var arr = data[key]
-      , timestamp
-    timestamp = arr[arr.length - 1].val //retrieve latest buffer's val attribute. this is assumed to be a timeStamp.
-    if (timestamp !== self._timestamps[key]) {
-      self._timestamps[key] = timestamp //new update to particular timestamp key
-      d3Data.push(timestamp)
+  Object.getOwnPropertyNames(data).forEach(function(key, ix) {
+    var latest = data[key]
+    latest = latest[latest.length - 1].val //retrieve latest buffer's val attribute
+    if (latest.timestamp !== self._timestamps[key]) {
+      self._timestamps[key] = latest.timestamp //new update
+      d3Data.push(latest.freq)
     } else {
       d3Data.push(null) //flag indicate that data hasn't been updated
     }
@@ -835,7 +801,7 @@ FrequencyGraph.prototype.display = function (ctx, data) {
     , styles
     , transitionStyles
 
-  self.dataPoints = Object.getOwnPropertyNames(self._timestamps).length
+  self.dataPoints = Object.getOwnPropertyNames(data).length
   //create new array with averages of values under each buf.name
   d3Data = this.unpackData(data)
 
@@ -877,28 +843,6 @@ FrequencyGraph.prototype.display = function (ctx, data) {
   })
 
 
-}
-
-FrequencyGraph.prototype.displayText = function (ctx, data) {
-  var self = this
-    , textOpts
-    , textData = []
-  Object.getOwnPropertyNames(data).forEach(function(prop) {
-    var arr = data[prop]
-      , dt
-    //strictly speaking, this number isn't the frequency, but rather DeltaTime. Consider using an actual frequency in hertz or such
-    if (arr.length > 1) dt = arr[arr.length - 1].val - arr[arr.length - 2].val
-    else dt = ''
-    textData.push(dt) //push the difference between the last two values. i.e the delta
-  })
-  textOpts = {
-    height : self.height
-    , width : self.width
-    , transitionTime : self.transition.time
-    , fill : self.text.color
-  }
-
-  drawText(ctx, textOpts, textData)
 }
 
 function drawText(ctx, opts, data) {
@@ -9315,8 +9259,9 @@ require.define("/node_modules/d3/d3.v2.js",function(require,module,exports,__dir
 require.define("/browser-index.js",function(require,module,exports,__dirname,__filename,process,global){//file that will be compiled by browserify
 
 module.exports = {
-  graphStream : require('./frontend/graphStream') //TODO, should I call this graphStream, or graphContext?
+  graph : require('./frontend/graphStream').graph
   , dataStream : require('./frontend/dataStream')
+  , _util : require('util')
 }
 
 if (window) {
