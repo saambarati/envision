@@ -11,6 +11,6 @@ or
 
 and
 
-check out: [`example.js`](https://github.com/saambarati/envision/blob/master/example/client/example.js)
+check out: [`example.js`](https://github.com/saambarati/envision/blob/master/example/public/example.js)
 
 More to come...
