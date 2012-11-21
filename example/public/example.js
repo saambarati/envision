@@ -21,8 +21,6 @@ function begin() {
     .attr('dataPoints', 10) //number of bars
     .attr('transition.duration', 600)
     .attr('separator', 2) //pixels between bars
-    .attr('style.fill', 'orange') //TODO, this prevents text from being displayed
-    .attr('style.stroke', 'black') //
   //retrieves previously made bar graph, useful when one graphStream has mutpile graphs, or when you don't want to hold a reference to bar, but just the graphStream
   //this is purely for demonstration. Usually, you would do this all through one method chaining
   barGraph.getGraph('bar')
