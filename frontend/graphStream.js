@@ -122,7 +122,7 @@ GraphStream.prototype.graph = function(type, opts) {
   var GraphType = graphConstructors[type] //cunstructor
     , graph
   if (!GraphType) throw new Error('there is no graph type ' + type)
-  if (!opts) opts = {}
+  opts = opts || {}
   _u.copyDefaults(this._opts, opts)  //override properties in _opts from opts
   graph = new GraphType(opts)
   this.drawingQueue[type] = graph
@@ -169,13 +169,14 @@ function Graph (opts) {
   }
   , self = this
 
-  if (!opts) opts = {}
+  opts = opts || {}
   //TODO, copyDefaults is shallow, make it a deep copy of objects
   _u.copyDefaults(optDefaults, opts)   //append default options to defaults
   _u.appendPropertiesFrom(opts, this)  //append all of opts's properties to 'this'
 }
 
 Graph.prototype.attr = function(name, val) {
+  debugger
   _u.nestedProperty(this, name, val) //assign property to value. this can be nested, i.e: this.text.color
   _u.debug('this.' + name + ' = ' + val)
   return this
@@ -190,20 +191,19 @@ Graph.prototype.title = function(title) {
 
 Graph.prototype.unpackData = function (data) { return data } //method to be overwritten by subclasses
 
-
 /**
  *   separator : bar separator   :: default 1
 */
 function BarGraph(opts) {
   if (!(this instanceof BarGraph)) return new BarGraph(opts)
   Graph.call(this, opts)
-  this.separator = opts.separator || 1
+  this.separator = opts.separator || 2
 }
 util.inherits(BarGraph, Graph)
 
 BarGraph.prototype.unpackData = function(data) {
   data =  data[ Object.getOwnPropertyNames(data)[0] ]  // only one graph 'name' at a time
-  data = data.slice( -this.dataPoints )
+  data = data.slice( -this.dataPoints ) //grab the last (this.dataPoints) number of points in our array
   return data
 }
 
@@ -392,10 +392,10 @@ function FrequencyGraph(opts) {
   }
   opts = opts || {}
   _u.copyDefaults(defaults, opts)
-  CircleGraph.call(this, opts)
+  Graph.call(this, opts)
   this._timestamps = {}
 }
-util.inherits(FrequencyGraph, CircleGraph)
+util.inherits(FrequencyGraph, Graph)
 
 /**
  *
@@ -538,7 +538,7 @@ function drawText(ctx, opts, data) {
        .duration(t)
        .attr('x', opts.x || function (d, i) { return intervalLength*i })
        .attr('dx', opts.dx || intervalLength/2)
-       .text(opts.text)
+      .text(opts.text)
 
   chart.exit().remove()
 }

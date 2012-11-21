@@ -39,7 +39,7 @@ function begin() {
     .attr('style.stroke', 'brown')
     .attr('style.stroke-width', 4)
     .attr('transtion.duration', 800)
-    .attr('text.display', true) //true by default, this line isn't necessary
+    .attr('text.display', false) //true by default, this line isn't necessary
     .attr('text.color', 'black') //embedded object attributes can be accessed through dot notation like regular object. 'text.color' accesses the color attribute on the text object
   cDatOpts = {
     url : '/pipecircle'
@@ -47,17 +47,20 @@ function begin() {
   }
   dataStream(cDatOpts).pipe(circleGraph)
 
-  freqGraph = envision.graphStream({selector : '#freq', height : 400, width : 800})
+  freqGraph = envision.graphStream({selector : '#freq', height : 200, width : 800})
   freqGraph.graph('frequency')
     .title('Frequency')
-    .attr('text.display', false) //this isn't working quite right yet
-    .attr('transition.stroke', 'red')
-    .attr('transition.style.stroke-width', 0.8)
+    .attr('text.display', false)
+    .attr('style.fill', 'red')
+    .attr('transition.style.stroke', 'red')
+    .attr('transition.style.stroke-width', 5.0)
   dataStream('/pipefreq').pipe(freqGraph)
+
 
   //for testing purposes. Launch up a debugger and check out the properties on these objects
   window.__freqGraph = freqGraph.graph('frequency')
   window.__circleGraph = circleGraph.graph('circle')
+  window.__barGraph = barGraph.graph('bar')
 }
 
 $(document).ready(begin)
