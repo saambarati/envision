@@ -51,16 +51,15 @@ function begin() {
   freqGraph.graph('frequency')
     .title('Frequency')
     .attr('text.display', false)
-    .attr('style.fill', 'red')
     .attr('transition.style.stroke', 'red')
     .attr('transition.style.stroke-width', 5.0)
   dataStream('/pipefreq').pipe(freqGraph)
 
 
   //for testing purposes. Launch up a debugger and check out the properties on these objects
-  window.__freqGraph = freqGraph.graph('frequency')
-  window.__circleGraph = circleGraph.graph('circle')
-  window.__barGraph = barGraph.graph('bar')
+  window.__freqGraph = freqGraph.getGraph('frequency')
+  window.__circleGraph = circleGraph.getGraph('circle')
+  window.__barGraph = barGraph.getGraph('bar')
 }
 
 $(document).ready(begin)

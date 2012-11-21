@@ -569,7 +569,7 @@ function Graph (opts) {
 }
 
 Graph.prototype.attr = function(name, val) {
-  debugger
+  //debugger
   _u.nestedProperty(this, name, val) //assign property to value. this can be nested, i.e: this.text.color
   _u.debug('this.' + name + ' = ' + val)
   return this
