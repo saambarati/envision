@@ -61,7 +61,7 @@ app.httpServer.listen(PORT)
 //for bar graph
 function test() {
   var endFunc = profiler.beg('requestTime')
-  request('http://npmjs.org', function(e, res, body) {
+  request.head('http://wikipedia.org', function(e, res, body) {
     //console.log(endFunc())
     endFunc()
     setTimeout(test, 2000)

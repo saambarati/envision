@@ -17,13 +17,13 @@
     "request": "*",
     "browserify": "*"
   },
-  "keywords" : [
-    "d3"
-    ,"data"
-    , "visualization"
-    , "data visualization"
-    , "stream"
-    , "stream graph"
+  "keywords": [
+    "d3",
+    "data",
+    "visualization",
+    "data visualization",
+    "stream",
+    "stream graph"
   ],
   "engines": {
     "node": "v0.8.x",

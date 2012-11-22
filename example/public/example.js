@@ -18,14 +18,15 @@ function begin() {
   barGraph = envision.graphStream(graphOpts).filter('requestTime') //creates a graph stream object. filters our non-requestTime buffers that are streamed to it
   barGraph.graph('bar') //returns Graph object
     .title('Response Time')
-    .attr('dataPoints', 10) //number of bars
+    .attr('numberOfBars', 4)
     .attr('transition.duration', 600)
-    .attr('separator', 2) //pixels between bars
+    .attr('separator', 5) //pixels between bars
   //retrieves previously made bar graph, useful when one graphStream has mutpile graphs, or when you don't want to hold a reference to bar, but just the graphStream
   //this is purely for demonstration. Usually, you would do this all through one method chaining
   barGraph.getGraph('bar')
     .attr('text.display', true)
     .attr('text.color', 'black')
+    .attr('style.stroke-width', 1)
   //feed in data from this url //pipe this data to the graph stream
   //the format here is '\n' delimited JSON buffers
   //look at http://github.com/saambarati/profiles for the correct json buffer type
@@ -36,10 +37,10 @@ function begin() {
   circleGraph.graph('circle') //.draw() called on graphStream returns a Graph object
     .title('Animating Circles')
     .attr('style.fill', 'gray')
-    .attr('style.stroke', 'brown')
-    .attr('style.stroke-width', 4)
+    .attr('style.stroke', 'black')
+    .attr('style.stroke-width', 2)
     .attr('transtion.duration', 800)
-    .attr('text.display', false) //true by default, this line isn't necessary
+    .attr('text.display', true) //true by default, this line isn't necessary
     .attr('text.color', 'black') //embedded object attributes can be accessed through dot notation like regular object. 'text.color' accesses the color attribute on the text object
   cDatOpts = {
     url : '/pipecircle'
@@ -52,7 +53,7 @@ function begin() {
     .title('Frequency')
     .attr('text.display', false)
     .attr('transition.style.stroke', 'red')
-    .attr('transition.style.stroke-width', 5.0)
+    .attr('transition.style.stroke-width', 2.0)
   dataStream('/pipefreq').pipe(freqGraph)
 
 

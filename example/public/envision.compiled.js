@@ -589,6 +589,11 @@ Graph.prototype.unpackData = function (data) { return data } //method to be over
 */
 function BarGraph(opts) {
   if (!(this instanceof BarGraph)) return new BarGraph(opts)
+  var defaults = {
+    numberOfBars : 10
+  }
+  opts = opts || {}
+  _u.copyDefaults(defaults, opts)
   Graph.call(this, opts)
   this.separator = opts.separator || 2
 }
@@ -596,7 +601,8 @@ util.inherits(BarGraph, Graph)
 
 BarGraph.prototype.unpackData = function(data) {
   data =  data[ Object.getOwnPropertyNames(data)[0] ]  // only one graph 'name' at a time
-  data = data.slice( -this.dataPoints ) //grab the last (this.dataPoints) number of points in our array
+  data = data.slice( -this.numberOfBars ) //grab the last (this.dataPoints) number of points in our array
+  this.dataPoints = data.length //dynamically update this.dataPoints. This has a max limit of this.numberOfBars
   return data
 }
 
@@ -612,7 +618,7 @@ BarGraph.prototype.display = function(ctx, data) {
     , max
   //ensure separator isn't too big compared to barWidth. i.e barWidth must be at least 1 px
   (function fixBarWidth() {
-    self.barWidth = ((self.width - (self.separator * self.dataPoints)) / self.dataPoints)
+    self.barWidth = (self.width - (self.separator * self.dataPoints)) / self.dataPoints
     self.barWidth = Math.floor(self.barWidth)
     if (self.barWidth < 1) {
       self.separator = Math.floor(self.separator/1.25)
@@ -627,38 +633,51 @@ BarGraph.prototype.display = function(ctx, data) {
              .domain([0, data.length])
              .range([0, self.width])
   yScale = d3.scale.linear()
-             .domain([min-5, max+5])
-             .range([0, self.height])
+             .domain([min, max])
+             .range([self.height * 0.05, self.height]) //3percent of height is minimum size
 
   toAll = {
-    'x' : function(d, i) { return i*self.barWidth + i*self.separator - 0.5}
-    , 'y' : function (d) { return self.height - yScale(d.val) - 0.5 }
-    , 'width' : function () { return self.barWidth - 0.5 }
-    , 'height' : function(d) { return yScale(d.val) - 0.5 }  //TODO : look into anti-aliasing prevention
+    'x' : function(d, i) { return i*self.barWidth + i*self.separator}
+    , 'y' : function (d) { return self.height - yScale(d.val) }
+    , 'width' : function () { return self.barWidth }
+    , 'height' : function(d) { return yScale(d.val) }  //TODO : look into anti-aliasing prevention
   }
 
   chart = ctx.selectAll('rect')
-             .data(data)
-
+             .data(data, function(d) { return d.__uid })
+  //d.val === UID for data. this is crucual. check out => http://mbostock.github.com/d3/tutorial/bar-2.html
   chart.enter().append('svg:rect')
-       .attr('x', function(d, i) { return toAll.x(d, i+1)})
+       .attr('x', function(d, i) { return toAll.x(d, i+1)}) //slide in from right
        .attr('y', toAll.y)
        .attr('width', toAll.width)
        .attr('height', toAll.height)
+     .transition()
+       .duration(t)
+       .ease(self.transition.ease)
+       .attr('x', toAll.x)
+       .attr('y', toAll.y)
+       .attr('height', toAll.height)
+       .attr('width', toAll.width)
   _u.applyStylesToD3Graph(Object.getOwnPropertyNames(self.style), self.style, chart)
 
   chart.transition()
        .duration(t)
        .ease(self.transition.ease)
-       .attr('x', function(d,i) { return toAll.x(d, i) })
+       .attr('x', toAll.x)
        .attr('y', toAll.y)
        .attr('height', toAll.height)
+        //'width' is necessary b/c when the graph is first streamed to, we increase this.datapoints
+       .attr('width', toAll.width)
   _u.applyStylesToD3Graph(Object.getOwnPropertyNames(self.transition.style), self.transition.style, chart)
 
   chart.exit()
        .transition()
        .duration(t)
-       .attr('x', function (d, i) { return xScale(i-1) - 0.5 })
+       //basically, all of this is a swoop out
+       .attr('transform', 'rotate(' + 90 + ')') //in degrees
+       .attr('x', function(d, i) { return toAll.x(d, i-1)}) //slide out to right
+       .attr('y', self.height / 4) //quarte the way up
+       .attr('height', function(d, i) { return toAll.height(d, i) * 0.1 })
        .remove()
 
 }
@@ -685,14 +704,24 @@ function CircleGraph (opts) {
   if (!(this instanceof CircleGraph)) return new CircleGraph(opts)
 
   Graph.call(this, opts)
+  this.__dataOrder = [] //self.data properties to maintain order
 }
 util.inherits(CircleGraph, Graph)
 
 CircleGraph.prototype.unpackData = function (data) {
   var d3Data = []
-    , avg
-  Object.getOwnPropertyNames(data).forEach(function(key) {
-    avg = _u.averageOfArray(data[key], function(d) { return d.val })
+    , props = Object.getOwnPropertyNames(data)
+    , self = this
+
+  if (props.length !== self.__dataOrder.length) { //only proceed if we need to update our properties
+    props.forEach(function(key) {
+      if (self.__dataOrder.indexOf(key) === -1) self.__dataOrder.push(key)
+    })
+  }
+  //prepare array in systematic order so the circles correspond through time at a given index
+  self.__dataOrder.forEach(function(key, ix) {
+    var avg = _u.averageOfArray(data[key], function(d) { return d.val })
+    avg.__uid = ix //for now, uid is the index
     d3Data.push(avg)
   })
   return d3Data
@@ -713,8 +742,6 @@ CircleGraph.prototype.display = function (ctx, data) {
   //create new array with averages of values under each buf.name
   d3Data = this.unpackData(data)
 
-  chart = ctx.selectAll('circle')
-             .data(d3Data)
 
   min = d3.min(d3Data, function(d) { return d - self.separator })
   max = d3.max(d3Data, function(d) {  return d + self.separator })
@@ -728,6 +755,9 @@ CircleGraph.prototype.display = function (ctx, data) {
   toAll.r = rScale
   toAll.cy = self.height/2 - 0.5
 
+  chart = ctx.selectAll('circle')
+             //.data(d3Data, function(d) { return d.__uid })
+             .data(d3Data)
   chart.enter().append('svg:circle')
        .attr('cx', toAll.cx)
        .attr('r', function(d) { return toAll.r(d) })
@@ -911,29 +941,37 @@ function drawText(ctx, opts, data) {
   opts.text = opts.text || String
 
   chart = ctx.selectAll('text')
-              .data(data)
+              .data(data, function(d, i) { return (d.__uid !== undefined ? d.__uid : d) })
 
-  chart.enter().append('svg:text')
+  chart.enter().insert('svg:text')
+  //chart.enter().append('svg:text')
        .attr('x', opts.x || function (d, i) { return intervalLength*i })
        .attr('y', opts.y || (opts.height - 28))
        .attr('dy', opts.dy || '1.2em')
        .attr('dx', opts.dx || (intervalLength/2))
        .attr('text-anchor', opts['text-anchor'] || 'middle')
+       .attr('opacity', 0)
        .attr('fill', opts.fill || 'gray')
        .text(opts.text)
      .transition()
        .duration(t)
        .attr('x', opts.x || function (d, i) { return intervalLength * i })
        .attr('dx', opts.dx || intervalLength/2)
+       .attr('opacity', 1)
        .text(opts.text)
 
   chart.transition()
        .duration(t)
        .attr('x', opts.x || function (d, i) { return intervalLength*i })
        .attr('dx', opts.dx || intervalLength/2)
-      .text(opts.text)
+       .attr('opacity', 1)
+       .text(opts.text)
 
-  chart.exit().remove()
+  chart.exit()
+    .transition()
+    .duration(t)
+    .attr('opacity', 0)
+    .remove()
 }
 
 
