@@ -18,7 +18,7 @@ function begin() {
   barGraph = envision.graphStream(graphOpts).filter('requestTime') //creates a graph stream object. filters our non-requestTime buffers that are streamed to it
   barGraph.graph('bar') //returns Graph object
     .title('Response Time')
-    .attr('numberOfBars', 4)
+    .attr('numberOfBars', 8)
     .attr('transition.duration', 600)
     .attr('separator', 5) //pixels between bars
   //retrieves previously made bar graph, useful when one graphStream has mutpile graphs, or when you don't want to hold a reference to bar, but just the graphStream
